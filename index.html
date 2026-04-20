@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Beyond CLIP — A First-Principles Field Guide to Multimodal Embedding. From CLIP to the Post-Embedding Agent Stack." />
+<title>Beyond CLIP // Field Guide to Multimodal Embedding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     BEYOND CLIP — Geek / Hacker themed field guide
+     Single-file self-contained HTML. No external JS libs.
+     ============================================================ */
+
+  :root {
+    --bg-0: #05070a;
+    --bg-1: #0a0e14;
+    --bg-2: #10151d;
+    --bg-3: #161c26;
+    --bg-card: rgba(16, 21, 29, 0.72);
+    --bg-code: #0d1117;
+
+    --fg-0: #e6edf3;
+    --fg-1: #c9d1d9;
+    --fg-2: #8b949e;
+    --fg-3: #6e7681;
+    --fg-dim: #484f58;
+
+    --accent: #39ff88;      /* terminal green */
+    --accent-dim: #1fcf6b;
+    --cyan: #00e5ff;
+    --magenta: #ff3fa4;
+    --amber: #ffb020;
+    --red: #ff6b6b;
+    --violet: #9d7bff;
+
+    --border: rgba(57, 255, 136, 0.15);
+    --border-soft: rgba(139, 148, 158, 0.18);
+    --border-hot: rgba(57, 255, 136, 0.45);
+
+    --glow-green: 0 0 20px rgba(57, 255, 136, 0.35);
+    --glow-cyan: 0 0 20px rgba(0, 229, 255, 0.35);
+    --glow-magenta: 0 0 20px rgba(255, 63, 164, 0.35);
+
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Space Grotesk", "Inter", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-0);
+    color: var(--fg-0);
+    font-family: var(--font-sans);
+    line-height: 1.7;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Grid + scanline background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(ellipse at 15% 0%, rgba(57, 255, 136, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 100%, rgba(0, 229, 255, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(255, 63, 164, 0.04) 0%, transparent 60%),
+      var(--bg-0);
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(57, 255, 136, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(57, 255, 136, 0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 85%);
+  }
+
+  /* Reading progress bar */
+  .progress {
+    position: fixed;
+    top: 0; left: 0;
+    width: 0%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--cyan), var(--magenta));
+    box-shadow: 0 0 10px var(--accent);
+    z-index: 100;
+    transition: width 0.08s ease-out;
+  }
+
+  /* =========== Layout =========== */
+  .shell {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  main.content {
+    padding: 0;
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* =========== Hero =========== */
+  .hero {
+    padding: 80px 0 40px;
+    position: relative;
+  }
+  .hero-term {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0;
+    box-shadow:
+      0 0 0 1px rgba(57,255,136,0.08),
+      0 20px 60px rgba(0,0,0,0.6),
+      var(--glow-green);
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+  .term-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #0e141c;
+    border-bottom: 1px solid var(--border-soft);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .term-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .d-r { background: #ff5f57; }
+  .d-y { background: #ffbd2e; }
+  .d-g { background: #28c840; }
+  .term-title { margin-left: auto; letter-spacing: 0.1em; }
+
+  .term-body { padding: 28px 32px 36px; }
+  .term-prompt {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+  }
+  .term-prompt .path { color: var(--cyan); }
+  .term-prompt .cmd { color: var(--accent); }
+
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(40px, 6vw, 72px);
+    line-height: 1.04;
+    margin: 8px 0 12px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    background: linear-gradient(135deg, #ffffff 0%, var(--accent) 40%, var(--cyan) 70%, var(--magenta) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 60px rgba(57,255,136,0.2);
+  }
+  .hero .sub {
+    font-family: var(--font-mono);
+    color: var(--fg-2);
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0 0 24px;
+    max-width: 780px;
+  }
+  .hero .sub em { color: var(--accent); font-style: normal; }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid;
+    background: rgba(255,255,255,0.02);
+  }
+  .badge-green { color: var(--accent); border-color: rgba(57,255,136,0.4); box-shadow: 0 0 12px rgba(57,255,136,0.15); }
+  .badge-amber { color: var(--amber); border-color: rgba(255,176,32,0.4); }
+  .badge-magenta { color: var(--magenta); border-color: rgba(255,63,164,0.4); }
+  .badge-cyan { color: var(--cyan); border-color: rgba(0,229,255,0.4); }
+
+  /* =========== Headings =========== */
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 3.3vw, 38px);
+    font-weight: 700;
+    line-height: 1.15;
+    margin: 80px 0 24px;
+    padding: 0 0 12px;
+    color: var(--fg-0);
+    border-bottom: 1px solid var(--border-soft);
+    position: relative;
+    letter-spacing: -0.015em;
+  }
+  h2 .tag {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-right: 14px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid var(--border-hot);
+    border-radius: 3px;
+    vertical-align: middle;
+    box-shadow: var(--glow-green);
+    background: rgba(57,255,136,0.06);
+  }
+  h2::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  h3 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--fg-0);
+    margin: 48px 0 16px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+  h3::before {
+    content: "// ";
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 800;
+  }
+
+  h4 {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--cyan);
+    margin: 28px 0 10px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* =========== Body text =========== */
+  p { margin: 0 0 18px; color: var(--fg-1); }
+  p strong { color: var(--fg-0); font-weight: 700; }
+  p em { color: var(--cyan); font-style: italic; font-weight: 500; }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dotted rgba(57,255,136,0.35);
+    transition: all 0.15s;
+  }
+  a:hover {
+    color: #7dffc0;
+    border-bottom-color: var(--accent);
+    text-shadow: 0 0 8px rgba(57,255,136,0.45);
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: rgba(57,255,136,0.08);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(57,255,136,0.15);
+  }
+
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 22px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--fg-1);
+    box-shadow: inset 0 0 0 1px rgba(57,255,136,0.04);
+    position: relative;
+  }
+  pre::before {
+    content: attr(data-lang);
+    position: absolute;
+    top: 8px;
+    right: 14px;
+    font-size: 10px;
+    color: var(--fg-3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  pre code { background: none; border: none; color: inherit; padding: 0; }
+  .tok-k { color: var(--magenta); }
+  .tok-s { color: #a6e3a1; }
+  .tok-n { color: var(--cyan); }
+  .tok-c { color: var(--fg-3); font-style: italic; }
+  .tok-p { color: var(--fg-2); }
+  .tok-at { color: var(--amber); }
+
+  hr {
+    border: 0;
+    height: 1px;
+    margin: 48px 0;
+    background: linear-gradient(90deg, transparent, var(--border-hot), transparent);
+  }
+
+  /* =========== Lists =========== */
+  ul, ol { color: var(--fg-1); padding-left: 22px; }
+  ul li, ol li { margin: 8px 0; }
+  ul { list-style: none; padding-left: 4px; }
+  ul > li { position: relative; padding-left: 20px; }
+  ul > li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 0.9em;
+    top: 0;
+  }
+  ol { padding-left: 22px; }
+  ol li::marker { color: var(--accent); font-family: var(--font-mono); font-weight: 700; }
+
+  /* =========== Callouts =========== */
+  .callout {
+    margin: 24px 0;
+    padding: 18px 22px 18px 56px;
+    border-radius: 6px;
+    position: relative;
+    border-left: 3px solid;
+    background: rgba(20, 27, 37, 0.6);
+    backdrop-filter: blur(4px);
+  }
+  .callout::before {
+    position: absolute;
+    left: 18px;
+    top: 18px;
+    font-family: var(--font-mono);
+    font-weight: 800;
+    font-size: 18px;
+  }
+  .callout .ctitle {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .callout p { margin: 0; color: var(--fg-1); }
+  .callout p + p { margin-top: 8px; }
+
+  .callout-note {
+    border-color: var(--cyan);
+    background: linear-gradient(90deg, rgba(0,229,255,0.08), rgba(0,229,255,0.01));
+  }
+  .callout-note::before { content: "ⓘ"; color: var(--cyan); }
+  .callout-note .ctitle { color: var(--cyan); }
+
+  .callout-important {
+    border-color: var(--magenta);
+    background: linear-gradient(90deg, rgba(255,63,164,0.08), rgba(255,63,164,0.01));
+  }
+  .callout-important::before { content: "◆"; color: var(--magenta); }
+  .callout-important .ctitle { color: var(--magenta); }
+
+  .callout-caution {
+    border-color: var(--amber);
+    background: linear-gradient(90deg, rgba(255,176,32,0.08), rgba(255,176,32,0.01));
+  }
+  .callout-caution::before { content: "⚠"; color: var(--amber); }
+  .callout-caution .ctitle { color: var(--amber); }
+
+  /* =========== Tables =========== */
+  .table-wrap {
+    margin: 24px 0;
+    overflow-x: auto;
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    background: rgba(10,14,20,0.6);
+  }
+  .table-wrap::-webkit-scrollbar { height: 8px; }
+  .table-wrap::-webkit-scrollbar-thumb { background: rgba(57,255,136,0.25); border-radius: 4px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  thead {
+    background: linear-gradient(180deg, rgba(57,255,136,0.08), rgba(57,255,136,0.02));
+    border-bottom: 2px solid var(--border-hot);
+  }
+  th {
+    text-align: left;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 14px;
+    border-top: 1px solid rgba(139,148,158,0.08);
+    color: var(--fg-1);
+    vertical-align: top;
+  }
+  td.num { text-align: right; font-family: var(--font-mono); color: var(--cyan); font-weight: 600; }
+  td strong { color: var(--fg-0); }
+  tbody tr:hover { background: rgba(57,255,136,0.03); }
+  tbody tr:hover td { color: var(--fg-0); }
+
+  /* =========== TL;DR cards =========== */
+  .tldr {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 16px;
+    margin: 28px 0 12px;
+  }
+  .tldr-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 20px 22px;
+    position: relative;
+    transition: all 0.3s;
+    overflow: hidden;
+  }
+  .tldr-card::before {
+    content: attr(data-n);
+    position: absolute;
+    top: -10px;
+    right: 14px;
+    font-family: var(--font-display);
+    font-size: 86px;
+    font-weight: 800;
+    color: rgba(57,255,136,0.07);
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+  .tldr-card:hover {
+    border-color: var(--border-hot);
+    transform: translateY(-2px);
+    box-shadow: var(--glow-green);
+  }
+  .tldr-card h4 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--font-mono);
+    font-weight: 700;
+  }
+  .tldr-card p { margin: 0; font-size: 14.5px; line-height: 1.65; color: var(--fg-1); position: relative; }
+
+  /* =========== SVG figure =========== */
+  figure.diagram {
+    margin: 36px 0;
+    padding: 24px;
+    background: radial-gradient(ellipse at center, rgba(10,14,20,0.9), rgba(5,7,10,0.95));
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  figure.diagram::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(57,255,136,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(57,255,136,0.04) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  figure.diagram svg { display: block; margin: 0 auto; position: relative; z-index: 1; max-width: 100%; height: auto; }
+  figure.diagram figcaption {
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    letter-spacing: 0.05em;
+    position: relative;
+    z-index: 1;
+  }
+  figure.diagram figcaption .lbl { color: var(--accent); }
+
+  /* =========== Footer =========== */
+  footer.site-foot {
+    margin: 80px 0 40px;
+    padding: 32px 0;
+    border-top: 1px solid var(--border-soft);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    text-align: center;
+  }
+  footer .sig { color: var(--accent); letter-spacing: 0.1em; }
+
+  /* Back to top */
+  .to-top {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--bg-1);
+    border: 1px solid var(--border-hot);
+    color: var(--accent);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    z-index: 50;
+    box-shadow: var(--glow-green);
+  }
+  .to-top.show { opacity: 1; pointer-events: auto; }
+  .to-top:hover { background: var(--accent); color: var(--bg-0); }
+
+  /* =========== Inline pills / misc =========== */
+  .pill {
+    display: inline-block;
+    padding: 1px 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+  }
+  .pill-C { background: rgba(57,255,136,0.15); color: var(--accent); border: 1px solid rgba(57,255,136,0.35); }
+  .pill-L { background: rgba(0,229,255,0.15); color: var(--cyan); border: 1px solid rgba(0,229,255,0.35); }
+  .pill-I { background: rgba(255,63,164,0.15); color: var(--magenta); border: 1px solid rgba(255,63,164,0.35); }
+
+  /* Probability bars in forecast */
+  .pbar {
+    display: inline-block;
+    width: 80px;
+    height: 6px;
+    background: rgba(139,148,158,0.15);
+    border-radius: 3px;
+    overflow: hidden;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .pbar > i {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--cyan));
+    box-shadow: 0 0 6px rgba(57,255,136,0.6);
+  }
+
+  /* Responsive */
+  @media (max-width: 960px) {
+    .shell { padding: 0 16px; }
+    .hero { padding: 40px 0 24px; }
+    h2 { margin-top: 60px; }
+  }
+
+  /* Selection */
+  ::selection { background: rgba(57,255,136,0.3); color: #fff; }
+
+  /* Glow text utility */
+  .glow { text-shadow: 0 0 10px currentColor; }
+
+  /* Era cards */
+  .era-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 24px 0;
+  }
+  @media (max-width: 780px) { .era-grid { grid-template-columns: 1fr; } }
+  .era-card {
+    padding: 18px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    border-top: 2px solid;
+    position: relative;
+  }
+  .era-card .era-when {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .era-card h5 {
+    margin: 4px 0 10px;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .era-card p { font-size: 13.5px; line-height: 1.6; margin: 0; }
+  .era-1 { border-top-color: var(--amber); }
+  .era-1 .era-when { color: var(--amber); }
+  .era-2 { border-top-color: var(--cyan); }
+  .era-2 .era-when { color: var(--cyan); }
+  .era-3 { border-top-color: var(--magenta); }
+  .era-3 .era-when { color: var(--magenta); }
+
+  /* Forecast tier headers */
+  .horizon {
+    margin: 32px 0 16px;
+    padding: 14px 18px;
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+    background: linear-gradient(90deg, rgba(57,255,136,0.06), transparent);
+    font-family: var(--font-mono);
+  }
+  .horizon-near { border-left-color: var(--accent); }
+  .horizon-near .when { color: var(--accent); }
+  .horizon-mid { border-left-color: var(--cyan); background: linear-gradient(90deg, rgba(0,229,255,0.06), transparent); }
+  .horizon-mid .when { color: var(--cyan); }
+  .horizon-far { border-left-color: var(--magenta); background: linear-gradient(90deg, rgba(255,63,164,0.06), transparent); }
+  .horizon-far .when { color: var(--magenta); }
+  .horizon .label { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; margin-right: 14px; }
+  .horizon .when { font-size: 12px; }
+  .horizon h3 { margin: 6px 0 0; border: 0; }
+  .horizon h3::before { content: ""; }
+
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="shell">
+
+<!-- ========== MAIN ========== -->
+<main class="content">
+
+<!-- ========== HERO ========== -->
+<section class="hero">
+  <div class="hero-term">
+    <div class="term-bar">
+      <span class="term-dot d-r"></span>
+      <span class="term-dot d-y"></span>
+      <span class="term-dot d-g"></span>
+      <span class="term-title">~/beyond-clip — field-guide.sh</span>
+    </div>
+    <div class="term-body">
+      <div class="term-prompt">
+        <span class="path">user@multimodal</span>:<span class="cmd">~</span>$ cat field_guide.md | render --theme=geek
+      </div>
+      <h1>Beyond CLIP</h1>
+      <p class="sub">
+        A first-principles field guide to multimodal embedding —
+        from <em>CLIP</em> to the <em>post-embedding agent stack</em>.
+        Not a neutral survey. A field manual for those who train, ship, and operate retrieval at production scale.
+      </p>
+      <div class="badges">
+        <span class="badge badge-green">◉ UPDATED · APR 2026</span>
+        <span class="badge badge-amber">📄 100+ PAPERS</span>
+        <span class="badge badge-magenta">⟁ 2ND EDITION</span>
+        <span class="badge badge-cyan">◆ OPEN FIELD GUIDE</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout callout-note">
+    <span class="ctitle">NOTE · READ ME FIRST</span>
+    <p><strong>This is not a neutral survey.</strong> It is a field guide for people who build, train, or deploy multimodal retrieval at production scale. It takes positions, names the trade-offs other surveys hide, and flags where the community is fooling itself. Every quantitative claim is either tied to a primary source or explicitly marked as a snapshot.</p>
+  </div>
+</section>
+
+<!-- ========== TL;DR ========== -->
+<section id="tldr">
+  <h2><span class="tag">TL;DR</span>Four claims</h2>
+
+  <div class="tldr">
+    <div class="tldr-card" data-n="01">
+      <h4>C–L–I is the only map</h4>
+      <p>Every architectural debate since CLIP is a point on the <strong>Compression · Localization · Instruction</strong> Pareto surface. "Dual-tower vs MLLM", "single-vector vs late interaction", "zero-shot vs instructed" are three projections of the same triangle. A production stack is never one model — it is a <span class="pill pill-C">C</span> first stage, a <span class="pill pill-L">L</span> structured stage for documents, and an <span class="pill pill-I">I</span> reasoner rerank. <em>The triangle is not a choice, it is a stack.</em></p>
+    </div>
+
+    <div class="tldr-card" data-n="02">
+      <h4>Era 3 = MLLM encoder + late interaction</h4>
+      <p>An 8B Qwen3-VL-Embedding hits <strong>77.82</strong> on MMEB-V2 (Apr 2026) — roughly ten points above any pure dual-tower. Nemotron-ColEmbed-V2-8B leads ViDoRe V3 at <strong>63.42 NDCG@10</strong> — economically impractical until <strong>MUVERA</strong> (NeurIPS 2024) compressed multi-vector ~32× with ~10% higher recall and ~90% lower latency than PLAID on BEIR subsets. Both unlocks are real; neither is universal.</p>
+    </div>
+
+    <div class="tldr-card" data-n="03">
+      <h4>Benchmarks lie — by design and by use</h4>
+      <p>MMEB-V2 top-20 span is under one architectural generation. Most "new SOTA" is <em>instruction-format tuning</em> on data that overlaps with training. On held-out splits public numbers drop several points. A single MMEB-V2 score quoted without CSV-vs-paper provenance, without held-out verification, is meaningless; gaps below ~2 points are noise. <em>The next real breakthrough is evaluation, not models.</em></p>
+    </div>
+
+    <div class="tldr-card" data-n="04">
+      <h4>Compute migrates to rerank</h4>
+      <p>Every 2025–2026 winner (MoCa, CoCoA, TTE, UniME-V2, RzenEmbed, AutoThinkRAG) spends compute where 2023 ignored: bidirectional CPT, EOS-reconstruction pretext, MLLM-as-judge negatives, reasoning traces <em>before</em> embedding. Extra thinking at <strong>rerank</strong> → +7.5 NDCG@10; at <strong>expansion</strong> → +1.1; <strong>inside retriever</strong> → ≈0. Scaling the encoder is over; the next five years are about <em>where in the pipeline the compute lives</em>.</p>
+    </div>
+  </div>
+</section>
+
+<hr />
+
+<!-- ========== PART I ========== -->
+<section id="part-1">
+  <h2><span class="tag">Part I</span>The C–L–I Framework</h2>
+
+  <p>A multimodal retriever maps a heterogeneous item (image, text, page, clip, audio, …) into a geometry in which <em>semantically similar</em> ≈ <em>geometrically close</em>. Every architectural choice trades along three near-orthogonal axes:</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Axis</th><th>Name</th><th>What it controls</th><th>Cheap if…</th><th>Expensive if…</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="pill pill-C">C</span></td><td><strong>Compression</strong></td><td>Semantics fit into a single fixed-dim vector</td><td>Corpus semantics simple per item; queries are global</td><td>Items are dense (pages, long video, multi-entity scenes)</td></tr>
+      <tr><td><span class="pill pill-L">L</span></td><td><strong>Localization</strong></td><td>Granularity of within-item alignment (1-vec ↔ multi-vec ↔ token MaxSim)</td><td>Items have few sub-units; MaxSim compute is cheap</td><td>Items hold many retrievable sub-units (words/frames)</td></tr>
+      <tr><td><span class="pill pill-I">I</span></td><td><strong>Instruction adaptivity</strong></td><td>Encoder output depends on a per-query task instruction</td><td>Workload is uniform</td><td>Heterogeneous RAG with per-query task semantics</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- ========= SVG: CLI Triangle ========= -->
+  <figure class="diagram">
+    <svg viewBox="0 0 860 520" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gC" x1="0" x2="1"><stop offset="0" stop-color="#39ff88"/><stop offset="1" stop-color="#1fcf6b"/></linearGradient>
+        <linearGradient id="gL" x1="0" x2="1"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
+        <linearGradient id="gI" x1="0" x2="1"><stop offset="0" stop-color="#ff3fa4"/><stop offset="1" stop-color="#9d7bff"/></linearGradient>
+
+        <linearGradient id="triFill" x1="0.5" y1="0" x2="0.5" y2="1">
+          <stop offset="0" stop-color="#39ff88" stop-opacity="0.10"/>
+          <stop offset="0.5" stop-color="#00e5ff" stop-opacity="0.05"/>
+          <stop offset="1" stop-color="#ff3fa4" stop-opacity="0.08"/>
+        </linearGradient>
+        <linearGradient id="edgeCL" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#39ff88"/><stop offset="1" stop-color="#00e5ff"/>
+        </linearGradient>
+        <linearGradient id="edgeCI" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#39ff88"/><stop offset="1" stop-color="#ff3fa4"/>
+        </linearGradient>
+        <linearGradient id="edgeLI" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#ff3fa4"/>
+        </linearGradient>
+
+        <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glowSoft" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="glowBg" cx="50%" cy="55%" r="55%">
+          <stop offset="0" stop-color="#39ff88" stop-opacity="0.18"/>
+          <stop offset="0.6" stop-color="#00e5ff" stop-opacity="0.06"/>
+          <stop offset="1" stop-color="#39ff88" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- subtle bg aura -->
+      <ellipse cx="430" cy="300" rx="380" ry="220" fill="url(#glowBg)"/>
+
+      <!-- concentric decorative triangles -->
+      <polygon points="430,80 740,450 120,450"
+        fill="url(#triFill)" stroke="none"/>
+      <polygon points="430,80 740,450 120,450"
+        fill="none" stroke="#2a3140" stroke-width="1" stroke-dasharray="6,5" opacity="0.7"/>
+      <polygon points="430,140 680,430 180,430"
+        fill="none" stroke="rgba(57,255,136,0.18)" stroke-width="1" stroke-dasharray="2,3"/>
+      <polygon points="430,200 620,410 240,410"
+        fill="none" stroke="rgba(57,255,136,0.12)" stroke-width="1" stroke-dasharray="2,3"/>
+
+      <!-- colored edges of outer triangle -->
+      <line x1="430" y1="80" x2="120" y2="450" stroke="url(#edgeCL)" stroke-width="2" stroke-opacity="0.55"/>
+      <line x1="430" y1="80" x2="740" y2="450" stroke="url(#edgeCI)" stroke-width="2" stroke-opacity="0.55"/>
+      <line x1="120" y1="450" x2="740" y2="450" stroke="url(#edgeLI)" stroke-width="2" stroke-opacity="0.55"/>
+
+      <!-- grid ticks inside -->
+      <line x1="430" y1="80" x2="430" y2="450" stroke="#39ff88" stroke-opacity="0.18" stroke-width="1" stroke-dasharray="2,6"/>
+
+      <!-- vertex dots with halo -->
+      <circle cx="430" cy="80" r="14" fill="#39ff88" opacity="0.15" filter="url(#glowSoft)"/>
+      <circle cx="430" cy="80" r="9" fill="url(#gC)" filter="url(#glow)"/>
+      <circle cx="120" cy="450" r="14" fill="#00e5ff" opacity="0.15" filter="url(#glowSoft)"/>
+      <circle cx="120" cy="450" r="9" fill="url(#gL)" filter="url(#glow)"/>
+      <circle cx="740" cy="450" r="14" fill="#ff3fa4" opacity="0.15" filter="url(#glowSoft)"/>
+      <circle cx="740" cy="450" r="9" fill="url(#gI)" filter="url(#glow)"/>
+
+      <!-- axis labels -->
+      <text x="430" y="52" text-anchor="middle" fill="#39ff88" font-family="JetBrains Mono" font-size="20" font-weight="800" filter="url(#glow)">C · Compression</text>
+      <text x="430" y="30" text-anchor="middle" fill="#8b949e" font-family="Inter" font-size="12">single-vector capacity</text>
+
+      <text x="92" y="480" text-anchor="middle" fill="#00e5ff" font-family="JetBrains Mono" font-size="20" font-weight="800" filter="url(#glow)">L · Localization</text>
+      <text x="92" y="498" text-anchor="middle" fill="#8b949e" font-family="Inter" font-size="12">within-item granularity</text>
+
+      <text x="770" y="480" text-anchor="middle" fill="#ff3fa4" font-family="JetBrains Mono" font-size="20" font-weight="800" filter="url(#glow)">I · Instruction</text>
+      <text x="770" y="498" text-anchor="middle" fill="#8b949e" font-family="Inter" font-size="12">task conditioning</text>
+
+      <!-- model clusters -->
+      <!-- CLIP / SigLIP : high C -->
+      <g>
+        <rect x="300" y="120" width="260" height="44" rx="8"
+          fill="rgba(57,255,136,0.08)" stroke="rgba(57,255,136,0.45)"/>
+        <circle cx="318" cy="137" r="4" fill="#39ff88" filter="url(#glow)"/>
+        <text x="332" y="140" fill="#e6edf3" font-family="Inter" font-size="12.5" font-weight="700">CLIP · SigLIP 2 · MetaCLIP 2</text>
+        <text x="332" y="156" fill="#8b949e" font-family="JetBrains Mono" font-size="10">one 512–1024d vec · uniform photo retrieval</text>
+      </g>
+
+      <!-- ColPali near L corner -->
+      <g>
+        <rect x="200" y="395" width="300" height="44" rx="8"
+          fill="rgba(0,229,255,0.08)" stroke="rgba(0,229,255,0.45)"/>
+        <circle cx="218" cy="412" r="4" fill="#00e5ff" filter="url(#glow)"/>
+        <text x="232" y="415" fill="#e6edf3" font-family="Inter" font-size="12.5" font-weight="700">ColPali · ColQwen3 · Nemotron-ColEmbed</text>
+        <text x="232" y="431" fill="#8b949e" font-family="JetBrains Mono" font-size="10">1000+ vecs/item · visual documents</text>
+      </g>
+
+      <!-- MLLM embedders near I -->
+      <g>
+        <rect x="470" y="235" width="320" height="44" rx="8"
+          fill="rgba(255,63,164,0.08)" stroke="rgba(255,63,164,0.45)"/>
+        <circle cx="488" cy="252" r="4" fill="#ff3fa4" filter="url(#glow)"/>
+        <text x="502" y="255" fill="#e6edf3" font-family="Inter" font-size="12.5" font-weight="700">Qwen3-VL-Embedding · GME · VLM2Vec · Seed1.6</text>
+        <text x="502" y="271" fill="#8b949e" font-family="JetBrains Mono" font-size="10">2–4k-d vec · task-conditioned</text>
+      </g>
+
+      <!-- TTE / UniME-V2 very high I -->
+      <g>
+        <rect x="420" y="325" width="340" height="44" rx="8"
+          fill="rgba(157,123,255,0.08)" stroke="rgba(157,123,255,0.45)"/>
+        <circle cx="438" cy="342" r="4" fill="#9d7bff" filter="url(#glow)"/>
+        <text x="452" y="345" fill="#e6edf3" font-family="Inter" font-size="12.5" font-weight="700">Think-Then-Embed · UniME-V2 · AutoThinkRAG</text>
+        <text x="452" y="361" fill="#8b949e" font-family="JetBrains Mono" font-size="10">externalized reasoning · very high I</text>
+      </g>
+
+      <!-- stack path: C → L → I curved -->
+      <g>
+        <path d="M 430 165 Q 280 270 200 395" fill="none" stroke="#39ff88" stroke-width="1.5" stroke-opacity="0.35" stroke-dasharray="4,4"/>
+        <path d="M 430 165 Q 540 220 480 240" fill="none" stroke="#39ff88" stroke-width="1.5" stroke-opacity="0.35" stroke-dasharray="4,4"/>
+        <path d="M 480 240 Q 490 300 450 325" fill="none" stroke="#39ff88" stroke-width="1.5" stroke-opacity="0.25" stroke-dasharray="4,4"/>
+      </g>
+
+      <!-- title banner -->
+      <g transform="translate(430,495)">
+        <rect x="-210" y="-16" width="420" height="26" rx="13"
+          fill="rgba(57,255,136,0.08)" stroke="rgba(57,255,136,0.35)"/>
+        <text x="0" y="3" text-anchor="middle" fill="#c9d1d9" font-family="Space Grotesk" font-size="13.5" font-weight="700">Production stack = C-first · L-middle · I-rerank</text>
+      </g>
+    </svg>
+    <figcaption><span class="lbl">FIG 1.1</span> · The C–L–I triangle. Every encoder is a point; every production pipeline is a path.</figcaption>
+  </figure>
+
+  <p>Four representative systems, projected on the triangle:</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>System family</th><th>C</th><th>L</th><th>I</th><th>Sweet spot</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>CLIP / SigLIP / jina-clip / MetaCLIP 2</td><td><strong>high</strong><br/><small>(one 512–1024d vec)</small></td><td>none</td><td>none</td><td>Uniform photo retrieval, classification, fast first stage</td></tr>
+      <tr><td>ColPali / ColQwen3 / Nemotron-ColEmbed</td><td>low <small>(1000+ vecs/item)</small></td><td><strong>high</strong> <small>(token-patch MaxSim)</small></td><td>low–mid</td><td>Visual documents, slides, dense pages</td></tr>
+      <tr><td>E5-V / VLM2Vec / GME / Qwen3-VL-Embedding / Seed1.6</td><td>medium <small>(one 2–4k-d vec)</small></td><td>low</td><td><strong>high</strong> <small>(task-conditioned)</small></td><td>Instructed retrieval, heterogeneous RAG, composition</td></tr>
+      <tr><td>Think-Then-Embed / UniME-V2 / AutoThinkRAG</td><td>medium</td><td>low–mid</td><td><strong>very high</strong> <small>(externalized reasoning)</small></td><td>Reasoning-heavy, ambiguous, compositional queries</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><strong>Three load-bearing properties of the frame, each with its falsifier.</strong> <em>The axes are near-orthogonal but not independent</em> — pushing C weakly helps L and I; pushing I barely helps C or L; most papers concentrate gains on one axis. A single architectural change that lifts all three by comparable magnitudes at fixed budget would refute this; none has been reported. <em>Every benchmark selects an axis.</em> MMEB-V2 is I-heavy; ViDoRe is L-heavy; MIEB tries to balance C across eight categories; Flickr/MSCOCO weight C almost alone. A benchmark whose per-task scorecard cleanly separates C/L/I contributions would falsify the selectivity claim; MIEB gestures toward this but does not close it. <em>Production stacks always hybridize.</em> The 2026 retrieval pipeline is <strong>C-axis first stage (SigLIP 2 / jina-clip-v2 / MetaCLIP 2) + L-axis structured stage for document corpora (ColQwen3 / Nemotron-ColEmbed-V2) + I-axis reranker or reasoner (Qwen3-VL-Embedding / Think-Then-Embed / MLLM-as-judge)</strong>. A single-model deployment that dominates heterogeneous workloads without a separate reranker or dual index would falsify this; its appearance would reorganize the field.</p>
+
+  <h3>Five years of history, in three moves</h3>
+
+  <div class="era-grid">
+    <div class="era-card era-1">
+      <span class="era-when">ERA 1 · 2021 – 2023</span>
+      <h5>Push C, ignore L and I</h5>
+      <p>CLIP (2021) → OpenCLIP → SigLIP → EVA-CLIP-18B. Single-vector dual-tower, contrastive on web image-text pairs. It worked, and it hit a ceiling: no localization, no instruction conditioning, saturation on anything compositional (ARO, MMVP), long-text (Long-CLIP), or high-resolution (PS3).</p>
+    </div>
+    <div class="era-card era-2">
+      <span class="era-when">ERA 2 · 2023 – 2025</span>
+      <h5>Keep C, seed L and I</h5>
+      <p>Three parallel waves: <em>data</em> replaces architecture as the primary lever (VeCLIP, LaCLIP, DAC, DFN, DCI, DreamLIP, Long-CLIP — +5–10 R@1 at fixed architecture); <em>L</em> gets a foothold with <strong>ColPali</strong> (Jun 2024), first credible demo that patch-level MaxSim beats global-vector retrieval on visual docs; <em>I</em> takes root with UniIR, MMEB-V1, MagicLens, M-BEIR, then E5-V / VLM2Vec turning MLLMs into instruction-conditioned embedders.</p>
+    </div>
+    <div class="era-card era-3">
+      <span class="era-when">ERA 3 · 2025 – 2026</span>
+      <h5>I becomes first-class</h5>
+      <p>MLLM contrastive fine-tunes produce 2–4k-d vectors with materially higher capacity than Era-1 dual-towers; instruction conditioning becomes table stakes; MUVERA + 2025–2026 DB wave turns late interaction from niche tool to default primitive for large, dynamic corpora; reasoning-augmented embedders (TTE, UniME-V2, AutoThinkRAG) move compute to inference time, ahead of the embedding itself. Era-3 retrieval is a <strong>stack</strong>, not a model.</p>
+    </div>
+  </div>
+
+  <!-- ========= SVG: Era Timeline ========= -->
+  <figure class="diagram">
+    <svg viewBox="0 0 880 280" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="tl" x1="0" x2="1">
+          <stop offset="0" stop-color="#ffb020"/>
+          <stop offset="0.5" stop-color="#00e5ff"/>
+          <stop offset="1" stop-color="#ff3fa4"/>
+        </linearGradient>
+        <linearGradient id="era1g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(255,176,32,0.18)"/><stop offset="1" stop-color="rgba(255,176,32,0.04)"/>
+        </linearGradient>
+        <linearGradient id="era2g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(0,229,255,0.18)"/><stop offset="1" stop-color="rgba(0,229,255,0.04)"/>
+        </linearGradient>
+        <linearGradient id="era3g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(255,63,164,0.18)"/><stop offset="1" stop-color="rgba(255,63,164,0.04)"/>
+        </linearGradient>
+        <filter id="glowTL" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- title -->
+      <text x="440" y="30" text-anchor="middle" fill="#c9d1d9" font-family="Space Grotesk" font-size="15" font-weight="700">Five years · three structural moves</text>
+
+      <!-- main timeline -->
+      <line x1="40" y1="160" x2="840" y2="160" stroke="url(#tl)" stroke-width="3" filter="url(#glowTL)"/>
+      <circle cx="40" cy="160" r="6" fill="#ffb020" filter="url(#glowTL)"/>
+      <circle cx="840" cy="160" r="6" fill="#ff3fa4" filter="url(#glowTL)"/>
+
+      <!-- Era 1 -->
+      <rect x="40" y="80" width="250" height="64" rx="8" fill="url(#era1g)" stroke="#ffb020" stroke-opacity="0.55"/>
+      <text x="55" y="102" fill="#ffb020" font-family="JetBrains Mono" font-size="11" font-weight="800" letter-spacing="0.08em">ERA 1 · 2021–2023</text>
+      <text x="55" y="122" fill="#e6edf3" font-family="Inter" font-size="13.5" font-weight="700">Push C · ignore L+I</text>
+      <text x="55" y="138" fill="#8b949e" font-family="JetBrains Mono" font-size="10">Dual-tower contrastive era</text>
+
+      <circle cx="80" cy="160" r="5" fill="#ffb020" filter="url(#glowTL)"/>
+      <text x="80" y="185" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">CLIP</text>
+      <circle cx="155" cy="160" r="5" fill="#ffb020" filter="url(#glowTL)"/>
+      <text x="155" y="205" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">OpenCLIP</text>
+      <circle cx="225" cy="160" r="5" fill="#ffb020" filter="url(#glowTL)"/>
+      <text x="225" y="185" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">SigLIP</text>
+      <circle cx="280" cy="160" r="5" fill="#ffb020" filter="url(#glowTL)"/>
+      <text x="280" y="205" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">EVA-CLIP</text>
+
+      <!-- Era 2 -->
+      <rect x="310" y="80" width="270" height="64" rx="8" fill="url(#era2g)" stroke="#00e5ff" stroke-opacity="0.55"/>
+      <text x="325" y="102" fill="#00e5ff" font-family="JetBrains Mono" font-size="11" font-weight="800" letter-spacing="0.08em">ERA 2 · 2023–2025</text>
+      <text x="325" y="122" fill="#e6edf3" font-family="Inter" font-size="13.5" font-weight="700">Keep C · seed L+I</text>
+      <text x="325" y="138" fill="#8b949e" font-family="JetBrains Mono" font-size="10">Data > architecture; ColPali; MMEB</text>
+
+      <circle cx="340" cy="160" r="5" fill="#00e5ff" filter="url(#glowTL)"/>
+      <text x="340" y="185" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">VeCLIP</text>
+      <circle cx="405" cy="160" r="5" fill="#00e5ff" filter="url(#glowTL)"/>
+      <text x="405" y="205" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">MMEB-V1</text>
+      <circle cx="465" cy="160" r="5" fill="#00e5ff" filter="url(#glowTL)"/>
+      <text x="465" y="185" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">ColPali</text>
+      <circle cx="525" cy="160" r="5" fill="#00e5ff" filter="url(#glowTL)"/>
+      <text x="525" y="205" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">VLM2Vec</text>
+      <circle cx="565" cy="160" r="5" fill="#00e5ff" filter="url(#glowTL)"/>
+      <text x="565" y="185" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">MUVERA</text>
+
+      <!-- Era 3 -->
+      <rect x="600" y="80" width="240" height="64" rx="8" fill="url(#era3g)" stroke="#ff3fa4" stroke-opacity="0.55"/>
+      <text x="615" y="102" fill="#ff3fa4" font-family="JetBrains Mono" font-size="11" font-weight="800" letter-spacing="0.08em">ERA 3 · 2025–2026</text>
+      <text x="615" y="122" fill="#e6edf3" font-family="Inter" font-size="13.5" font-weight="700">I first-class · C unlocked · L practical</text>
+      <text x="615" y="138" fill="#8b949e" font-family="JetBrains Mono" font-size="10">MLLM encoders + reasoning rerank</text>
+
+      <circle cx="625" cy="160" r="5" fill="#ff3fa4" filter="url(#glowTL)"/>
+      <text x="625" y="185" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">MoCa</text>
+      <circle cx="680" cy="160" r="5" fill="#ff3fa4" filter="url(#glowTL)"/>
+      <text x="680" y="205" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">TTE</text>
+      <circle cx="735" cy="160" r="5" fill="#ff3fa4" filter="url(#glowTL)"/>
+      <text x="735" y="185" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">UniME-V2</text>
+      <circle cx="790" cy="160" r="5" fill="#ff3fa4" filter="url(#glowTL)"/>
+      <text x="790" y="205" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">Qwen3-VL</text>
+      <circle cx="830" cy="160" r="5" fill="#ff3fa4" filter="url(#glowTL)"/>
+      <text x="830" y="185" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10">Nemotron</text>
+
+      <!-- scale text -->
+      <text x="40" y="255" fill="#6e7681" font-family="JetBrains Mono" font-size="10" font-weight="600">2021</text>
+      <text x="430" y="255" text-anchor="middle" fill="#6e7681" font-family="JetBrains Mono" font-size="10" font-weight="600">2024</text>
+      <text x="840" y="255" text-anchor="end" fill="#6e7681" font-family="JetBrains Mono" font-size="10" font-weight="600">2026</text>
+      <line x1="40" y1="232" x2="840" y2="232" stroke="#2a3140" stroke-width="1" stroke-dasharray="2,5"/>
+    </svg>
+    <figcaption><span class="lbl">FIG 1.2</span> · From contrastive dual-towers to reasoning-augmented MLLM stacks.</figcaption>
+  </figure>
+
+  <div class="callout callout-important">
+    <span class="ctitle">IMPORTANT</span>
+    <p>From here on, read every section as answering a single question: <em>which axis is being pushed, at what cost to the other two?</em></p>
+  </div>
+</section>
+
+<hr />
+
+<!-- ========== PART II ========== -->
+<section id="part-2">
+  <h2><span class="tag">Part II</span>The Two Unlocks: MLLM Encoders &amp; Late Interaction</h2>
+
+  <p>Era 3 is defined by two structural changes that happen to be near-orthogonal on C–L–I: a causal decoder turning out to be a better <strong>C+I</strong> encoder than any bidirectional alternative, and late interaction turning out to be <strong>affordable at scale</strong>. Each solves a problem the other cannot touch. The modality gap — a long-standing worry about the CLIP geometry — is dissolved as a side effect of both.</p>
+
+  <h3>2.1 Why a causal MLLM is secretly a good encoder</h3>
+
+  <p>On paper, using a causal decoder for retrieval is strange. Attention is triangular; the last token sees everything but nothing sees the last token; retrieval similarity is symmetric and causal LMs are asymmetric by construction. Yet E5-V, VLM2Vec, GME, Seed1.6-Embedding, Qwen3-VL-Embedding, KaLM-Embedding, MoCa, RzenEmbed — all follow the same recipe (run a forward pass, pool the last hidden state, done) and beat every bidirectional alternative at comparable scale. Four mechanisms explain why; a fifth explains where it breaks.</p>
+
+  <p><strong>The last-token bottleneck is a feature, not a bug.</strong> Next-token prediction forces <em>every preceding token to contribute signal to the final position</em> — otherwise the predictor cannot be coherent. A well-pretrained causal LM therefore already contains, hidden inside it, an encoder whose output is the last hidden state: a task-agnostic compressed summary. Contrastive fine-tuning rotates this summary into retrieval-friendly subspace; it rarely has to build the summary from scratch. This is Jiang et al.'s argument for text (LLM2Vec); it generalizes to multimodal inputs because cross-modal tokens pass through the same residual stream.</p>
+
+  <p><strong>Cross-modal interleaving shares the compression subspace across modalities.</strong> In CLIP, image and text hidden states are produced by <em>different networks</em> glued by a shared projection. In an MLLM embedder, they pass through the <em>same</em> transformer stack, interleaved in a single residual stream, with attention free to mix them at every layer. The functional subspace used for retrieval is therefore shared by construction. This is the C-axis property that dissolves the <strong>modality gap</strong> (Liang et al., NeurIPS 2022) at the pooled token: CLIP's narrow disjoint cones are a free-energy minimum of the dual-tower contrastive loss landscape — no gradient reason to close them. MLLMs do not abolish the gap (hidden states still cluster by modality layer-by-layer) but they <em>relocate</em> it to the subspace used for retrieval, which is all retrieval needs. The papers that explicitly address modality geometry — MoCa, UniME, Kuaishou's Modality Curation — pick up additional points on cross-modal compositional queries where the residual gap still bites.</p>
+
+  <p><strong>Instruction prompts act as soft task heads.</strong> The E5-V prompt <code>Summarize the above image in one word:</code> does the job of a "task head" in CLIP's text tower — it tells the model which retrieval task it is performing and empirically routes information through different parts of the last hidden state. MMEB-style per-task instructions generalize this: the encoder learns a small, fast router from instruction to retrieval subspace. This is pure I-axis capability with no CLIP analogue.</p>
+
+  <p><strong>The minority report: bidirectional beats causal at the margin.</strong> Two independent groups now show that flipping continual pretraining to bidirectional attention plus a masked or EOS-reconstruction pretext recovers measurable points. <strong>MoCa</strong> (<a href="https://arxiv.org/abs/2506.23115">arXiv 2506.23115</a>, Renmin U. + Microsoft Research Asia) runs a modality-aware continual pretraining stage with bidirectional attention + text MLM + image MAE, then contrastive fine-tuning: MoCa-7B reaches <strong>71.5</strong> on MMEB-V1 vs 67.1 for a bidirectional-only baseline (≈ +4.4) and vs 69.8 for mmE5. <strong>CoCoA</strong> (<a href="https://arxiv.org/abs/2603.01471">arXiv 2603.01471</a>, ICT/CAS + Baidu) replaces the pretext with collaborative attention + EOS-based reconstruction, reaching <strong>70.6</strong> at 7B. The effect is real, reproducible across objectives, and cheap — roughly one extra pretraining epoch. Open base models (Qwen3-VL, InternVL3) are still purely causal. This is low-hanging fruit; see §VI for why it lands by Q4 2026.</p>
+
+  <p><strong>The 2026 turn: compute before the embedding.</strong> A newer family shows the next axis beyond bigger encoders. <strong>Think-Then-Embed (TTE)</strong> (<a href="https://arxiv.org/abs/2510.05014">arXiv 2510.05014</a>, Meta + UCF + NYU, ICLR 2026) first generates a reasoning trace with a small MLLM reasoner, then conditions the embedder on both the query and the trace — reported 7% absolute MMEB improvement over recently proposed baselines on the 78-task average. <strong>UniME-V2</strong> (<a href="https://arxiv.org/abs/2510.13515">arXiv 2510.13515</a>, Alibaba, AAAI 2026) replaces the brittle similarity heuristic in contrastive hard-negative mining with MLLM-as-a-judge soft scoring. <strong>RzenEmbed</strong> (<a href="https://arxiv.org/abs/2510.27350">arXiv 2510.27350</a>, Qihoo 360) adds hardness-weighted contrastive loss; <strong>AutoThinkRAG</strong> (<a href="https://arxiv.org/abs/2603.05551">arXiv 2603.05551</a>) routes by query complexity and reports 82.13% on DocBench with 18.9% fewer per-query tokens than naïve multimodal RAG. Each is a migration of compute from training to inference, from encoder to reasoner — the same dynamic that played out in chat LLMs with o1/Claude reasoning modes, arriving in retrieval roughly one year later. The 2026–2027 recipe almost certainly combines <em>causal MLLM backbone</em> + <em>bidirectional continual pretraining</em> + <em>inference-time reasoning trace</em> + <em>MLLM-as-judge hard-negative mining</em>. Anyone selling one lever is selling a quarter of the answer.</p>
+
+  <h3>2.2 Late interaction as within-item localization</h3>
+
+  <p>ColPali / ColQwen3 / ColNomic / Nemotron-ColEmbed-V2 dominate visual-document retrieval (Nemotron-ColEmbed-V2-8B leads ViDoRe V3 at <strong>63.42 NDCG@10</strong> per NVIDIA's Feb-2026 pipeline snapshot) and barely move Flickr30K / MSCOCO text↔image retrieval. Under C–L–I this is exactly what you expect: a PDF page rendered to pixels produces ~1,000 patches, each aligned to a retrievable sub-unit (word, cell, axis label). MaxSim over query tokens against these patch tokens is ColBERT on a document that happens to be pixels. On photographs the same patches correspond to texture and lighting — units that are not individually retrievable. Page queries are multi-concept ("<em>Q3 revenue in Europe</em>") and MaxSim aggregates multi-token relevance; photo queries are typically single-concept and a single global vector losslessly compresses them.</p>
+
+  <p>This is a framing point the community keeps missing: <strong>the architecture community calls this "late interaction"; the retrieval community should call it <em>within-item localization</em>.</strong> It is a different problem that happens to share the dense-vector toolkit. L-axis is useful only when items have queryable sub-units; on anything else, the ~1000× storage tax is unrecoverable.</p>
+
+  <h3>2.3 The MUVERA era</h3>
+
+  <p>Late interaction's Achilles' heel was always storage. At 10M pages × ~1,030 tokens × 128-d fp16 ≈ <strong>~2.6 TB</strong> of raw vectors before any compression, and MaxSim compute scales linearly in tokens. Three waves of compression closed the gap:</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Technique</th><th>Year</th><th>Effect</th><th>Residual cost</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>PLAID centroid clustering (ColBERT-v2)</td><td>2023</td><td>~8–10× storage reduction; candidate-filter + rerank</td><td>Slightly slower query path</td></tr>
+      <tr><td>Binary / int8 quantization of MaxSim tensors</td><td>2024</td><td>~4–8× storage; recall –1 to –3 pts</td><td>QAT helps</td></tr>
+      <tr><td><strong>MUVERA: Fixed Dimensional Encodings</strong> <a href="https://arxiv.org/abs/2405.19504">(arXiv 2405.19504, NeurIPS 2024)</a></td><td>2024 → DB 2025–26</td><td>Combined with PQ-256-8: <strong>~32× storage</strong> vs raw at negligible quality loss. Vs PLAID on 6 BEIR subsets: <strong>~10% higher recall</strong>, <strong>~90% lower latency</strong>. Weaviate's blog reports <strong>~70% memory reduction on LoTTE</strong>.</td><td>Requires DB support</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- SVG: MUVERA compression concept -->
+  <figure class="diagram">
+    <svg viewBox="0 0 880 340" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="muv" x1="0" x2="1"><stop offset="0" stop-color="#00e5ff"/><stop offset="1" stop-color="#39ff88"/></linearGradient>
+        <linearGradient id="muvBar" x1="0" x2="1"><stop offset="0" stop-color="#39ff88"/><stop offset="1" stop-color="#00e5ff"/></linearGradient>
+        <linearGradient id="beforeBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(0,229,255,0.12)"/><stop offset="1" stop-color="rgba(0,229,255,0.02)"/>
+        </linearGradient>
+        <linearGradient id="afterBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(57,255,136,0.14)"/><stop offset="1" stop-color="rgba(57,255,136,0.02)"/>
+        </linearGradient>
+        <filter id="muvGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <marker id="arrM" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#39ff88"/>
+        </marker>
+      </defs>
+
+      <!-- title -->
+      <text x="440" y="28" text-anchor="middle" fill="#c9d1d9" font-family="Space Grotesk" font-size="15" font-weight="700">MUVERA · Fixed Dimensional Encoding</text>
+      <text x="440" y="46" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="11">variable multi-vector set → single fixed-dim vector</text>
+
+      <!-- Before: multi-vector -->
+      <text x="160" y="75" text-anchor="middle" fill="#00e5ff" font-family="JetBrains Mono" font-size="12" font-weight="800" letter-spacing="0.1em">BEFORE · MULTI-VECTOR</text>
+      <rect x="40" y="90" width="240" height="200" rx="10" fill="url(#beforeBg)" stroke="rgba(0,229,255,0.45)" stroke-dasharray="4,3"/>
+      <text x="160" y="108" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">ColPali page · 1,030 tokens × 128d</text>
+
+      <!-- patch grid as small rounded squares -->
+      <g fill="#00e5ff" opacity="0.75">
+        <g>
+          <rect x="56" y="122" width="7" height="7" rx="1.2"/><rect x="68" y="122" width="7" height="7" rx="1.2"/><rect x="80" y="122" width="7" height="7" rx="1.2"/><rect x="92" y="122" width="7" height="7" rx="1.2"/><rect x="104" y="122" width="7" height="7" rx="1.2"/><rect x="116" y="122" width="7" height="7" rx="1.2"/><rect x="128" y="122" width="7" height="7" rx="1.2"/><rect x="140" y="122" width="7" height="7" rx="1.2"/><rect x="152" y="122" width="7" height="7" rx="1.2"/><rect x="164" y="122" width="7" height="7" rx="1.2"/><rect x="176" y="122" width="7" height="7" rx="1.2"/><rect x="188" y="122" width="7" height="7" rx="1.2"/><rect x="200" y="122" width="7" height="7" rx="1.2"/><rect x="212" y="122" width="7" height="7" rx="1.2"/><rect x="224" y="122" width="7" height="7" rx="1.2"/><rect x="236" y="122" width="7" height="7" rx="1.2"/><rect x="248" y="122" width="7" height="7" rx="1.2"/><rect x="260" y="122" width="7" height="7" rx="1.2"/>
+        </g>
+        <g>
+          <rect x="56" y="134" width="7" height="7" rx="1.2"/><rect x="68" y="134" width="7" height="7" rx="1.2"/><rect x="80" y="134" width="7" height="7" rx="1.2"/><rect x="92" y="134" width="7" height="7" rx="1.2"/><rect x="104" y="134" width="7" height="7" rx="1.2"/><rect x="116" y="134" width="7" height="7" rx="1.2"/><rect x="128" y="134" width="7" height="7" rx="1.2"/><rect x="140" y="134" width="7" height="7" rx="1.2"/><rect x="152" y="134" width="7" height="7" rx="1.2"/><rect x="164" y="134" width="7" height="7" rx="1.2"/><rect x="176" y="134" width="7" height="7" rx="1.2"/><rect x="188" y="134" width="7" height="7" rx="1.2"/><rect x="200" y="134" width="7" height="7" rx="1.2"/><rect x="212" y="134" width="7" height="7" rx="1.2"/><rect x="224" y="134" width="7" height="7" rx="1.2"/><rect x="236" y="134" width="7" height="7" rx="1.2"/><rect x="248" y="134" width="7" height="7" rx="1.2"/><rect x="260" y="134" width="7" height="7" rx="1.2"/>
+        </g>
+        <g>
+          <rect x="56" y="146" width="7" height="7" rx="1.2"/><rect x="68" y="146" width="7" height="7" rx="1.2"/><rect x="80" y="146" width="7" height="7" rx="1.2"/><rect x="92" y="146" width="7" height="7" rx="1.2"/><rect x="104" y="146" width="7" height="7" rx="1.2"/><rect x="116" y="146" width="7" height="7" rx="1.2"/><rect x="128" y="146" width="7" height="7" rx="1.2"/><rect x="140" y="146" width="7" height="7" rx="1.2"/><rect x="152" y="146" width="7" height="7" rx="1.2"/><rect x="164" y="146" width="7" height="7" rx="1.2"/><rect x="176" y="146" width="7" height="7" rx="1.2"/><rect x="188" y="146" width="7" height="7" rx="1.2"/><rect x="200" y="146" width="7" height="7" rx="1.2"/><rect x="212" y="146" width="7" height="7" rx="1.2"/><rect x="224" y="146" width="7" height="7" rx="1.2"/><rect x="236" y="146" width="7" height="7" rx="1.2"/><rect x="248" y="146" width="7" height="7" rx="1.2"/><rect x="260" y="146" width="7" height="7" rx="1.2"/>
+        </g>
+        <g>
+          <rect x="56" y="158" width="7" height="7" rx="1.2"/><rect x="68" y="158" width="7" height="7" rx="1.2"/><rect x="80" y="158" width="7" height="7" rx="1.2"/><rect x="92" y="158" width="7" height="7" rx="1.2"/><rect x="104" y="158" width="7" height="7" rx="1.2"/><rect x="116" y="158" width="7" height="7" rx="1.2"/><rect x="128" y="158" width="7" height="7" rx="1.2"/><rect x="140" y="158" width="7" height="7" rx="1.2"/><rect x="152" y="158" width="7" height="7" rx="1.2"/><rect x="164" y="158" width="7" height="7" rx="1.2"/><rect x="176" y="158" width="7" height="7" rx="1.2"/><rect x="188" y="158" width="7" height="7" rx="1.2"/><rect x="200" y="158" width="7" height="7" rx="1.2"/><rect x="212" y="158" width="7" height="7" rx="1.2"/><rect x="224" y="158" width="7" height="7" rx="1.2"/><rect x="236" y="158" width="7" height="7" rx="1.2"/><rect x="248" y="158" width="7" height="7" rx="1.2"/><rect x="260" y="158" width="7" height="7" rx="1.2"/>
+        </g>
+        <g>
+          <rect x="56" y="170" width="7" height="7" rx="1.2"/><rect x="68" y="170" width="7" height="7" rx="1.2"/><rect x="80" y="170" width="7" height="7" rx="1.2"/><rect x="92" y="170" width="7" height="7" rx="1.2"/><rect x="104" y="170" width="7" height="7" rx="1.2"/><rect x="116" y="170" width="7" height="7" rx="1.2"/><rect x="128" y="170" width="7" height="7" rx="1.2"/><rect x="140" y="170" width="7" height="7" rx="1.2"/><rect x="152" y="170" width="7" height="7" rx="1.2"/><rect x="164" y="170" width="7" height="7" rx="1.2"/><rect x="176" y="170" width="7" height="7" rx="1.2"/><rect x="188" y="170" width="7" height="7" rx="1.2"/><rect x="200" y="170" width="7" height="7" rx="1.2"/><rect x="212" y="170" width="7" height="7" rx="1.2"/><rect x="224" y="170" width="7" height="7" rx="1.2"/><rect x="236" y="170" width="7" height="7" rx="1.2"/><rect x="248" y="170" width="7" height="7" rx="1.2"/><rect x="260" y="170" width="7" height="7" rx="1.2"/>
+        </g>
+        <g>
+          <rect x="56" y="182" width="7" height="7" rx="1.2"/><rect x="68" y="182" width="7" height="7" rx="1.2"/><rect x="80" y="182" width="7" height="7" rx="1.2"/><rect x="92" y="182" width="7" height="7" rx="1.2"/><rect x="104" y="182" width="7" height="7" rx="1.2"/><rect x="116" y="182" width="7" height="7" rx="1.2"/><rect x="128" y="182" width="7" height="7" rx="1.2"/><rect x="140" y="182" width="7" height="7" rx="1.2"/><rect x="152" y="182" width="7" height="7" rx="1.2"/><rect x="164" y="182" width="7" height="7" rx="1.2"/><rect x="176" y="182" width="7" height="7" rx="1.2"/><rect x="188" y="182" width="7" height="7" rx="1.2"/><rect x="200" y="182" width="7" height="7" rx="1.2"/><rect x="212" y="182" width="7" height="7" rx="1.2"/><rect x="224" y="182" width="7" height="7" rx="1.2"/><rect x="236" y="182" width="7" height="7" rx="1.2"/><rect x="248" y="182" width="7" height="7" rx="1.2"/><rect x="260" y="182" width="7" height="7" rx="1.2"/>
+        </g>
+        <g opacity="0.55">
+          <rect x="56" y="194" width="7" height="7" rx="1.2"/><rect x="68" y="194" width="7" height="7" rx="1.2"/><rect x="80" y="194" width="7" height="7" rx="1.2"/><rect x="92" y="194" width="7" height="7" rx="1.2"/><rect x="104" y="194" width="7" height="7" rx="1.2"/><rect x="116" y="194" width="7" height="7" rx="1.2"/><rect x="128" y="194" width="7" height="7" rx="1.2"/><rect x="140" y="194" width="7" height="7" rx="1.2"/><rect x="152" y="194" width="7" height="7" rx="1.2"/><rect x="164" y="194" width="7" height="7" rx="1.2"/><rect x="176" y="194" width="7" height="7" rx="1.2"/><rect x="188" y="194" width="7" height="7" rx="1.2"/><rect x="200" y="194" width="7" height="7" rx="1.2"/><rect x="212" y="194" width="7" height="7" rx="1.2"/><rect x="224" y="194" width="7" height="7" rx="1.2"/><rect x="236" y="194" width="7" height="7" rx="1.2"/><rect x="248" y="194" width="7" height="7" rx="1.2"/><rect x="260" y="194" width="7" height="7" rx="1.2"/>
+        </g>
+      </g>
+
+      <rect x="60" y="220" width="200" height="28" rx="5" fill="rgba(255,107,107,0.08)" stroke="rgba(255,107,107,0.4)"/>
+      <text x="160" y="239" text-anchor="middle" fill="#ff6b6b" font-family="JetBrains Mono" font-size="13" font-weight="800">~2.6 TB / 10M pages</text>
+
+      <text x="160" y="272" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">MaxSim O(Nq × Nd) per query</text>
+
+      <!-- center arrow + pipeline -->
+      <g transform="translate(380, 185)">
+        <!-- curve box background -->
+        <rect x="-30" y="-50" width="140" height="90" rx="10" fill="rgba(57,255,136,0.06)" stroke="rgba(57,255,136,0.35)" stroke-dasharray="3,3"/>
+        <text x="40" y="-30" text-anchor="middle" fill="#39ff88" font-family="JetBrains Mono" font-size="12" font-weight="800">MUVERA · FDE</text>
+        <text x="40" y="-14" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">fixed-dim projection</text>
+        <line x1="-20" y1="10" x2="100" y2="10" stroke="url(#muv)" stroke-width="3" marker-end="url(#arrM)" filter="url(#muvGlow)"/>
+        <text x="40" y="30" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">+ PQ-256-8 quantize</text>
+      </g>
+
+      <!-- After: single fixed vector -->
+      <text x="720" y="75" text-anchor="middle" fill="#39ff88" font-family="JetBrains Mono" font-size="12" font-weight="800" letter-spacing="0.1em">AFTER · FDE + PQ-256-8</text>
+      <rect x="600" y="90" width="240" height="200" rx="10" fill="url(#afterBg)" stroke="rgba(57,255,136,0.5)"/>
+      <text x="720" y="108" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">one fixed vec · inner product</text>
+
+      <!-- compact vector bars -->
+      <g>
+        <rect x="620" y="132" width="200" height="12" fill="url(#muvBar)" rx="3"/>
+        <rect x="620" y="150" width="200" height="12" fill="url(#muvBar)" rx="3" opacity="0.7"/>
+        <rect x="620" y="168" width="200" height="12" fill="url(#muvBar)" rx="3" opacity="0.5"/>
+        <rect x="620" y="186" width="200" height="12" fill="url(#muvBar)" rx="3" opacity="0.35"/>
+      </g>
+
+      <rect x="620" y="220" width="200" height="28" rx="5" fill="rgba(57,255,136,0.1)" stroke="rgba(57,255,136,0.5)"/>
+      <text x="720" y="239" text-anchor="middle" fill="#39ff88" font-family="JetBrains Mono" font-size="13" font-weight="800">~80 GB / 10M pages</text>
+
+      <text x="720" y="272" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">any ANN index · cheap inner product</text>
+
+      <!-- footer stats banner -->
+      <g transform="translate(440,314)">
+        <rect x="-180" y="-14" width="360" height="26" rx="13" fill="rgba(57,255,136,0.1)" stroke="rgba(57,255,136,0.45)"/>
+        <text x="0" y="4" text-anchor="middle" fill="#39ff88" font-family="JetBrains Mono" font-size="12" font-weight="800" letter-spacing="0.05em">~32× STORAGE · +10% RECALL · −90% LATENCY</text>
+      </g>
+    </svg>
+    <figcaption><span class="lbl">FIG 2.1</span> · MUVERA projects variable-length multi-vector sets into a single fixed-dim vector that preserves MaxSim-style relevance under inner product.</figcaption>
+  </figure>
+
+  <p>MUVERA's mechanism is worth stating plainly: it projects a variable-length multi-vector set into a single <em>fixed-dimensional</em> vector compatible with any standard ANN index, preserving MaxSim-style relevance under inner product. The breakthrough was not published in 2024 — it was that 2025–2026 DB integration turned the model-side choice into a configuration toggle. Weaviate 1.31 exposes it as a first-class <code>Encoding.muvera(...)</code> option; Qdrant's FastEmbed line treats it as an encoder-side post-processing step; Vespa provides native tensor MaxSim; LanceDB and Milvus are catching up. Before this wave, L-axis retrieval was a tool for medium, static, high-value document corpora. After it, L-axis retrieval is a candidate for large, dynamic corpora — and the C-axis single-vector default starts looking weaker on document-heavy workloads.</p>
+
+  <p>The 2026 practitioner defaults fall out cleanly. <em>Natural-image retrieval</em> (photos, social content, products) stays single-vector; late interaction offers no material gain and still costs ~30× storage even post-MUVERA. <em>Visual-document retrieval</em> (PDFs, slides, UI screenshots, scans, charts, diagrams) is now decisively late-interaction; ColQwen3-7B or Nemotron-ColEmbed-V2-8B is mainstream where it was niche 18 months ago. <em>Mixed corpora</em> (a web page with both a photo and a table) demand a two-track index — single-vector for the photo, multi-vector for the document segments. No single model handles both optimally, and MUVERA does not change that — it just makes the different problem affordable at scale.</p>
+
+  <!-- SVG: Production Stack Pipeline -->
+  <figure class="diagram">
+    <svg viewBox="0 0 900 280" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sg1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(57,255,136,0.18)"/><stop offset="1" stop-color="rgba(57,255,136,0.04)"/>
+        </linearGradient>
+        <linearGradient id="sg2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(0,229,255,0.18)"/><stop offset="1" stop-color="rgba(0,229,255,0.04)"/>
+        </linearGradient>
+        <linearGradient id="sg3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(255,63,164,0.18)"/><stop offset="1" stop-color="rgba(255,63,164,0.04)"/>
+        </linearGradient>
+        <linearGradient id="arrowG" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#39ff88"/><stop offset="0.5" stop-color="#00e5ff"/><stop offset="1" stop-color="#ff3fa4"/>
+        </linearGradient>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#c9d1d9"/>
+        </marker>
+        <filter id="stgGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- title -->
+      <text x="450" y="30" text-anchor="middle" fill="#c9d1d9" font-family="Space Grotesk" font-size="15" font-weight="700">Era-3 production stack · C→L→I cascade</text>
+
+      <!-- background rail -->
+      <line x1="40" y1="145" x2="860" y2="145" stroke="url(#arrowG)" stroke-width="2" stroke-opacity="0.25" stroke-dasharray="3,4"/>
+
+      <!-- Pipeline boxes -->
+      <g font-family="Inter" font-weight="600">
+        <!-- Query -->
+        <rect x="30" y="98" width="110" height="94" rx="10" fill="rgba(255,255,255,0.02)" stroke="#6e7681"/>
+        <text x="85" y="122" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10" font-weight="800" letter-spacing="0.1em">INPUT</text>
+        <text x="85" y="145" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="700">Query</text>
+        <text x="85" y="164" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">text / image /</text>
+        <text x="85" y="178" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">hybrid + instruction</text>
+
+        <!-- Stage 1: C first -->
+        <rect x="170" y="70" width="170" height="150" rx="12" fill="url(#sg1)" stroke="#39ff88" stroke-width="1.5" filter="url(#stgGlow)"/>
+        <rect x="182" y="80" width="72" height="22" rx="11" fill="rgba(57,255,136,0.15)" stroke="#39ff88"/>
+        <text x="218" y="96" text-anchor="middle" fill="#39ff88" font-family="JetBrains Mono" font-size="10" font-weight="800">STAGE 1 · C</text>
+        <text x="255" y="135" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="700">Single-vector</text>
+        <text x="255" y="153" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="700">first stage</text>
+        <line x1="188" y1="165" x2="322" y2="165" stroke="rgba(57,255,136,0.3)" stroke-dasharray="2,3"/>
+        <text x="255" y="184" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10.5">SigLIP 2 · jina-clip-v2</text>
+        <text x="255" y="200" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10.5">MetaCLIP 2</text>
+
+        <!-- Stage 2: L structured -->
+        <rect x="370" y="70" width="180" height="150" rx="12" fill="url(#sg2)" stroke="#00e5ff" stroke-width="1.5" filter="url(#stgGlow)"/>
+        <rect x="382" y="80" width="72" height="22" rx="11" fill="rgba(0,229,255,0.15)" stroke="#00e5ff"/>
+        <text x="418" y="96" text-anchor="middle" fill="#00e5ff" font-family="JetBrains Mono" font-size="10" font-weight="800">STAGE 2 · L</text>
+        <text x="460" y="135" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="700">Late interaction</text>
+        <text x="460" y="153" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="700">(+ MUVERA)</text>
+        <line x1="388" y1="165" x2="542" y2="165" stroke="rgba(0,229,255,0.3)" stroke-dasharray="2,3"/>
+        <text x="460" y="184" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10.5">ColQwen3</text>
+        <text x="460" y="200" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10.5">Nemotron-ColEmbed-V2</text>
+
+        <!-- Stage 3: I reranker -->
+        <rect x="580" y="70" width="190" height="150" rx="12" fill="url(#sg3)" stroke="#ff3fa4" stroke-width="1.5" filter="url(#stgGlow)"/>
+        <rect x="592" y="80" width="72" height="22" rx="11" fill="rgba(255,63,164,0.15)" stroke="#ff3fa4"/>
+        <text x="628" y="96" text-anchor="middle" fill="#ff3fa4" font-family="JetBrains Mono" font-size="10" font-weight="800">STAGE 3 · I</text>
+        <text x="675" y="135" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="700">Reasoner / reranker</text>
+        <text x="675" y="152" text-anchor="middle" fill="#9d7bff" font-family="JetBrains Mono" font-size="11" font-weight="700">+7.5 NDCG@10</text>
+        <line x1="598" y1="165" x2="762" y2="165" stroke="rgba(255,63,164,0.3)" stroke-dasharray="2,3"/>
+        <text x="675" y="184" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10.5">Qwen3-VL-Embedding</text>
+        <text x="675" y="200" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10.5">TTE · MLLM-as-judge</text>
+
+        <!-- Answer -->
+        <rect x="800" y="98" width="80" height="94" rx="10" fill="rgba(255,255,255,0.02)" stroke="#6e7681"/>
+        <text x="840" y="122" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10" font-weight="800" letter-spacing="0.1em">OUTPUT</text>
+        <text x="840" y="145" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="700">Answer</text>
+        <text x="840" y="164" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">top-k</text>
+        <text x="840" y="178" text-anchor="middle" fill="#8b949e" font-family="JetBrains Mono" font-size="10">+ citations</text>
+      </g>
+
+      <!-- Arrows between stages -->
+      <g stroke-width="2" fill="none">
+        <line x1="140" y1="145" x2="168" y2="145" stroke="#6e7681" marker-end="url(#arrA)"/>
+        <line x1="340" y1="145" x2="370" y2="145" stroke="#39ff88" marker-end="url(#arrA)"/>
+        <line x1="550" y1="145" x2="580" y2="145" stroke="#00e5ff" marker-end="url(#arrA)"/>
+        <line x1="770" y1="145" x2="800" y2="145" stroke="#ff3fa4" marker-end="url(#arrA)"/>
+      </g>
+
+      <!-- Scale labels -->
+      <g font-family="JetBrains Mono" font-size="10.5" font-weight="700">
+        <rect x="225" y="236" width="60" height="18" rx="9" fill="rgba(57,255,136,0.08)" stroke="rgba(57,255,136,0.35)"/>
+        <text x="255" y="250" text-anchor="middle" fill="#39ff88">top-10K</text>
+        <rect x="430" y="236" width="60" height="18" rx="9" fill="rgba(0,229,255,0.08)" stroke="rgba(0,229,255,0.35)"/>
+        <text x="460" y="250" text-anchor="middle" fill="#00e5ff">top-100</text>
+        <rect x="645" y="236" width="60" height="18" rx="9" fill="rgba(255,63,164,0.08)" stroke="rgba(255,63,164,0.35)"/>
+        <text x="675" y="250" text-anchor="middle" fill="#ff3fa4">top-10</text>
+      </g>
+
+      <!-- axis hint -->
+      <text x="170" y="270" fill="#6e7681" font-family="JetBrains Mono" font-size="10">cheap · broad</text>
+      <text x="770" y="270" text-anchor="end" fill="#6e7681" font-family="JetBrains Mono" font-size="10">expensive · precise</text>
+    </svg>
+    <figcaption><span class="lbl">FIG 2.2</span> · The triangle is not a choice — it is a stack. Each stage narrows candidates while increasing per-item compute.</figcaption>
+  </figure>
+</section>
+
+<hr />
+
+<!-- ========== PART III ========== -->
+<section id="part-3">
+  <h2><span class="tag">Part III</span>Data, Instruction, Benchmarks: Why the Numbers Lie</h2>
+
+  <p>This section merges three debates that are usually treated separately but are in fact one: <em>how do we know a model is good, and what does "good" reward?</em> Data, instruction conditioning, and benchmark design are the three knobs through which a paper's headline number gets manufactured, and all three are now contaminated enough that a single score without provenance is indistinguishable from a marketing claim.</p>
+
+  <h3>3.1 The data stratification, and its ceiling</h3>
+
+  <p>Every paper since 2024 attributes &gt;80% of gains to data engineering. This is correct in a narrow regime and overclaimed everywhere else. The decomposition that holds across regimes:</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Regime</th><th>Dominant driver</th><th>Representative evidence</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>&lt; 500M image-text pairs</td><td>Architecture</td><td>SigLIP sigmoid loss, EVA-CLIP masking, FLIP token drop — each delivers 3–8 pt gains regardless of data volume</td></tr>
+      <tr><td>500M – 5B pairs</td><td>Data cleaning + re-captioning</td><td>VeCLIP / DreamLIP / LaCLIP / DAC / DFN / DCI / Long-CLIP: alt-text → VLM caption lifts R@1 by 5–10 pts</td></tr>
+      <tr><td>5B – ~50B pairs, decent captions</td><td>Synthetic hard negatives + task mixtures</td><td>MegaPairs / mmE5 / Modality Curation / B3 — data <em>shape</em> (mixture across modalities and tasks) beats data <em>volume</em></td></tr>
+      <tr><td>&gt; 50B tokens, rich task formats</td><td>Inference-time techniques</td><td>Seed1.6 / Qwen3-VL territory — instruction engineering, MLLM-as-judge hard-negative mining (UniME-V2), reasoning augmentation (TTE), prompt routing</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>This resolves the apparent contradiction between "scale is all you need" (DataComp, LAION) and "data quality is all you need" (DFN, Seed1.6). Both are right at different altitudes. The <strong>MegaPairs → mmE5 → Modality-Curation arc</strong> is the one that matters for 2026 practitioners: MegaPairs (BAAI, Dec 2024) synthesized hundreds of millions of image-image-text triplets with no human labelers, ending the "labelling-bounded" myth; mmE5 (Renmin U. + Microsoft, Feb 2025) showed multilinguality is nearly free if you synthesize; Modality Curation (NEU + Kuaishou, May 2025) showed batch composition matters, yielding free MMEB points. The collective — and rarely stated — implication: <strong>the data pipeline has replaced the architecture as the primary IP of an embedding lab.</strong> "Reproduce from our weights and code" has quietly become the gold standard, because "reproduce from scratch" is no longer feasible outside well-funded labs.</p>
+
+  <p>The ceiling nobody quite admits: once the 78-task MMEB mixture is saturated with synthetic + mined pairs, the marginal point gets expensive enough that inference-time compute (reasoning, MLLM-as-judge rerank, test-time retrieval) is now cheaper per point than more training data. This is the regime TTE, UniME-V2, AutoThinkRAG exploit. Expect the 2026–2027 paper balance to tilt back toward <em>architecture + inference</em>, away from <em>data volume</em> — a full cycle from 2022.</p>
+
+  <h3>3.2 Instruction conditioning: product feature disguised as modeling technique</h3>
+
+  <p>Every competitive 2025–2026 model exposes an <code>instruction</code> field. MMEB-V2 bakes 78-task instructions into the eval. The quiet, ugly consequence: <strong>the model learns to branch on the instruction</strong>, and leaderboard numbers start reflecting how well it <em>switches tasks</em> rather than how well it <em>represents content</em>. Strip the instruction and many 2026 SOTA models drop several points on zero-shot — a gap that rarely appears in press releases. Small prompt rewordings can move NDCG@5 by several points; this is under-reported. Three observations that practitioners keep relearning the hard way: <em>instructions help only if your workload actually provides them</em>; <em>zero-shot and instructed retrieval are different skills</em> (MagicLens, UniME, ColPali do both well; heavily-instructed models lean on the prompt branch); <em>style drift is a production risk</em>. Under C–L–I, instruction conditioning is a pure I-axis lever — valuable where your workload has task heterogeneity, a net loss where it does not.</p>
+
+  <h3>3.3 Benchmarks: saturation, contamination, and what a score actually means</h3>
+
+  <p>From MMEB-V1 (Nov 2024) to MMEB-V2 (Apr 2026), the top score moved explosively in the first year and is now saturating. Three symptoms. <em>Per-task ceiling effects</em> — on the easier MMEB-V2 tasks, the top-20 models are within 1–2 points, and further progress is noise. <em>Instruction-format overfitting</em> — several submissions gained points by tuning the MMEB task-prompt formatting without retraining the encoder. <em>Data leakage</em> — the current generation is trained on corpora that plausibly include MMEB-related train splits (MMEB reuses M-BEIR, UniIR, and public retrieval sets). Not fraud; the normal hygiene problem every benchmark eventually faces (ImageNet, GLUE, SuperGLUE). But in a field moving this fast, <strong>leaderboards overstate generalization</strong>; an external production deployment typically sees the public MMEB-V2 score <em>minus 3–5 points</em>.</p>
+
+  <p>Under C–L–I, the differences between benchmarks stop being mysterious:</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Benchmark</th><th>Primary axis</th><th>Winning architecture (Apr 2026)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>MMEB-V2 (TIGER-Lab)</td><td><span class="pill pill-I">I</span> (instruction + composition + task-switching)</td><td>Large MLLM + rich instruction data (Qwen3-VL-Embedding-8B, Seed1.6-Embedding)</td></tr>
+      <tr><td>MIEB (MTEB team)</td><td>Balanced <span class="pill pill-C">C</span> (encoder quality across 8 categories)</td><td>Balanced MLLMs + strong classical encoders</td></tr>
+      <tr><td>ViDoRe V3 (Illuin)</td><td><span class="pill pill-L">L</span> (localization-heavy visual-doc retrieval)</td><td>Late interaction (Nemotron-ColEmbed-V2, ColQwen3)</td></tr>
+      <tr><td>M-BEIR (TIGER-Lab)</td><td><span class="pill pill-I">I</span> (instruction-aware multimodal retrieval)</td><td>Reasoning-augmented retrievers (TTE, RAR)</td></tr>
+      <tr><td>MTEB v2 (MTEB team)</td><td><span class="pill pill-C">C</span> on text, partial <span class="pill pill-I">I</span></td><td>Text-only giants (Harrier-OSS-27B, KaLM-Embedding-Gemma3-12B)</td></tr>
+      <tr><td>CoIR (ACL 2025)</td><td>Code retrieval <span class="pill pill-C">C</span></td><td>SFR-Embedding-Code-2B_R (≈ 67.4 aggregate, per model card)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>Cross-leaderboard snapshot — April 2026</h4>
+  <p>Every number is a single-configuration snapshot from a primary source (leaderboard CSV, model card, or technical report). They move week-to-week. <strong>Gaps &lt;2 points are noise.</strong></p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>MMEB-V2</th>
+        <th>MTEB v2 (ML)</th>
+        <th>ViDoRe V3</th>
+        <th>License</th>
+        <th>Axis</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Qwen3-VL-Embedding-8B</td><td class="num"><strong>77.82</strong><br/><small style="color:var(--fg-3)">CSV #1</small></td><td class="num">67.9</td><td class="num">—</td><td>Apache-2.0</td><td><span class="pill pill-C">C</span>+<span class="pill pill-I">I</span></td></tr>
+      <tr><td>Seed1.6-Embedding-1215</td><td class="num">75.08<br/><small style="color:var(--fg-3)">CSV #2</small></td><td class="num">—</td><td class="num">—</td><td>Closed API</td><td><span class="pill pill-C">C</span>+<span class="pill pill-I">I</span></td></tr>
+      <tr><td>IFM-TTE-7B (Think-Then-Embed)</td><td class="num">73.06 / 74.1<br/><small style="color:var(--fg-3)">CSV / paper</small></td><td class="num">—</td><td class="num">—</td><td>Open</td><td><span class="pill pill-I">I</span>+reason</td></tr>
+      <tr><td>RzenEmbed-v2-7B</td><td class="num">71.12 / ~72.9</td><td class="num">—</td><td class="num">—</td><td>Weights on HF</td><td><span class="pill pill-C">C</span>+<span class="pill pill-I">I</span></td></tr>
+      <tr><td>UniME-V2 (LLaVA-OV-7B)</td><td class="num">71.2 / 59.12<br/><small style="color:var(--fg-3)">paper / CSV</small></td><td class="num">—</td><td class="num">—</td><td>Open</td><td><span class="pill pill-I">I</span></td></tr>
+      <tr><td>VLM2Vec-V2-2B</td><td class="num">58–59</td><td class="num">—</td><td class="num">—</td><td>Apache-2.0</td><td><span class="pill pill-C">C</span>+<span class="pill pill-I">I</span></td></tr>
+      <tr><td>GME-Qwen2-VL-7B</td><td class="num">57.8</td><td class="num">—</td><td class="num">—</td><td>Apache-2.0</td><td><span class="pill pill-C">C</span>+<span class="pill pill-I">I</span></td></tr>
+      <tr><td>Nemotron-ColEmbed-V2-8B</td><td class="num">—</td><td class="num">—</td><td class="num"><strong>63.42</strong><br/><small style="color:var(--fg-3)">#1</small></td><td>Open</td><td><span class="pill pill-L">L</span></td></tr>
+      <tr><td>Nemotron-ColEmbed-V2-4B</td><td class="num">—</td><td class="num">—</td><td class="num">61.54</td><td>Open</td><td><span class="pill pill-L">L</span></td></tr>
+      <tr><td>Harrier-OSS-v1-27B</td><td class="num">—</td><td class="num"><strong>74.3</strong></td><td class="num">—</td><td>Apache-2.0</td><td><span class="pill pill-C">C</span> (text)</td></tr>
+      <tr><td>KaLM-Embedding-Gemma3-12B</td><td class="num">—</td><td class="num">72.32</td><td class="num">—</td><td>MIT</td><td><span class="pill pill-C">C</span> (text, ML)</td></tr>
+      <tr><td>Gemini-Embedding-001</td><td class="num">—</td><td class="num">68.37</td><td class="num">—</td><td>Closed API</td><td><span class="pill pill-C">C</span> (breadth)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Why two MMEB-V2 columns for some rows? The leaderboard CSV penalizes models that skip subsets more than the authors' own Table numbers do. For a fair within-column comparison, pick the CSV. For a paper-claim comparison, pick the Table. Always name which. Corrections to community folklore: RzenEmbed and UniME-V2 do <strong>not</strong> sit at MMEB-V2 ~77; TTE is mid-70s, not 76; the 76.9 sometimes quoted for Seed1.6 is the Qwen3 paper's 78-task recomputation, not a MIEB ranking. <strong>Never quote a single number without naming the axis, the CSV-vs-paper distinction, and whether the evaluation used held-out splits.</strong> This is not pedantry — it is the only defense against a saturating benchmark.</p>
+</section>
+
+<hr />
+
+<!-- ========== PART IV ========== -->
+<section id="part-4">
+  <h2><span class="tag">Part IV</span>Deployment Economics</h2>
+
+  <p>Leaderboards never show the numbers that dominate a production budget. What follows is a single-configuration baseline on one H100 SXM, fp16, batch tuned per model, CUDA 12.x, realistic image distribution. <strong>Treat ±20% as noise.</strong></p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Model</th><th>Axis</th><th>VRAM</th><th>Index 10M imgs</th><th>p99 latency</th><th>Storage (10M × vec)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>SigLIP 2 SO400M-L</td><td><span class="pill pill-C">C</span></td><td class="num">~18 GB</td><td class="num">~6 h</td><td class="num">~8 ms</td><td class="num">~23 GB (1152d)</td></tr>
+      <tr><td>MetaCLIP 2 G/14</td><td><span class="pill pill-C">C</span></td><td class="num">~40 GB</td><td class="num">~16 h</td><td class="num">~15 ms</td><td class="num">~26 GB (1280d)</td></tr>
+      <tr><td>jina-clip-v2</td><td><span class="pill pill-C">C</span></td><td class="num">~24 GB</td><td class="num">~8 h</td><td class="num">~12 ms</td><td class="num">~20 GB (1024d)</td></tr>
+      <tr><td>GME-Qwen2-VL-2B</td><td><span class="pill pill-C">C</span>+<span class="pill pill-I">I</span></td><td class="num">~36 GB</td><td class="num">~40 h</td><td class="num">~55 ms</td><td class="num">~31 GB (1536d)</td></tr>
+      <tr><td>GME-Qwen2-VL-7B v2</td><td><span class="pill pill-C">C</span>+<span class="pill pill-I">I</span></td><td class="num">~60 GB</td><td class="num">~5 d</td><td class="num">~120 ms</td><td class="num">~72 GB (3584d)</td></tr>
+      <tr><td>Qwen3-VL-Embedding-8B</td><td><span class="pill pill-C">C</span>+<span class="pill pill-I">I</span></td><td class="num">~60 GB</td><td class="num">~6–8 d</td><td class="num">~140 ms</td><td class="num">~72 GB (3584d)</td></tr>
+      <tr><td>ColPali v1.3</td><td><span class="pill pill-L">L</span></td><td class="num">~22 GB</td><td class="num">~10 h</td><td class="num">~30 ms + MaxSim</td><td class="num">~2.6 TB (raw)</td></tr>
+      <tr><td>ColQwen3-7B</td><td><span class="pill pill-L">L</span></td><td class="num">~48 GB</td><td class="num">~6 d</td><td class="num">~110 ms + MaxSim</td><td class="num">~2.6 TB (raw)</td></tr>
+      <tr><td>Nemotron-ColEmbed-V2-8B</td><td><span class="pill pill-L">L</span></td><td class="num">~56 GB</td><td class="num">~7 d</td><td class="num">~130 ms + MaxSim</td><td class="num">~2.6 TB (raw)</td></tr>
+      <tr style="background: rgba(57,255,136,0.04);"><td>↳ <strong>+ MUVERA / FDE</strong></td><td><span class="pill pill-L">L</span></td><td class="num">same</td><td class="num">same</td><td class="num">single inner product</td><td class="num"><strong>~80 GB (~32× smaller)</strong></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Three rules of thumb. <em>Every 2× in encoder parameters → roughly 2.5–3× in indexing and 1.5–2× in query latency</em> — MLLMs pay in dynamic resolution and variable-length attention. <em>Multi-vector without compression ≈ 1000× storage vs single-vector</em>; MUVERA cuts this to ~30×, which is the regime where hybrid C+L stacks become a default rather than an exotic choice. <em>Query latency in MLLM encoders is decode-bound</em> — they are still autoregressively producing special embedding tokens, and vLLM/SGLang-style batched decoding offers several-× headroom that most stacks do not yet use. This is the first target of 2026-H2 inference-infra work (see §VI-Near).</p>
+
+  <p><strong>Matryoshka + binary is not a free lunch.</strong> The marketing claim — "cut storage 64× with &lt;1% quality loss" — holds only on the easiest workloads. MRL truncation (3584 → 512) costs ~1–2% on easy tasks and materially more on compositional / multi-entity / visual-document workloads; 1-bit binary quantization adds percentage points more. Published combined-loss-under-5% results typically come from classification-style probes, not retrieval on hard heterogeneous data. The way to recover the marketing claim is not to deny it — it is to <strong>binary-recall + full-precision rerank</strong>: retrieve top-100 with MRL+binary, re-score those 100 with fp16. Hybrid Recall@10 sits within ~1% of full precision at ≥32× smaller storage. Matryoshka + binary is a <em>first-stage</em> technique, not a full-stack technique; if you are not reranking, do not binarise.</p>
+
+  <p><strong>What breaks when you put ColPali in production.</strong> Storage explosion is mitigated by MUVERA but the compressed index still costs ~30× a single-vector corpus — budget accordingly. Serving MaxSim is the DB question, not the model question: Qdrant ships native multivector + MaxSim and is the default for ColPali/ColQwen deployments; Weaviate 1.31 adds native MUVERA via <code>Encoding.muvera(...)</code>; Vespa exposes tensor MaxSim; LanceDB has multi-vector columns with client-side MaxSim; Milvus 2.5 supports multi-vector fields with MaxSim as a <code>group_by</code> workaround, with 3.0 on the roadmap; FAISS reduces client-side. Pick the DB on <em>this</em> feature, not on headline benchmarks. Freshness is hard — each document is thousands of inserts, and bulk-reindex cadences that worked for single-vector break here, although MUVERA's compressed encoding updates incrementally like a normal vector. Chart and screenshot brittleness dominate over model choice on low-DPI inputs; input preprocessing matters more than which ColQwen you picked. And MaxSim at high QPS can become the bottleneck, not the encoder — MUVERA's ~90% latency reduction on the BEIR subsets is the only reason this is tractable at scale.</p>
+
+  <div class="callout callout-caution">
+    <span class="ctitle">CAUTION · CHOOSE ON ECONOMICS</span>
+    <p>ColPali is the right answer for <em>medium-sized, high-value, static or slow-changing</em> document collections. Post-MUVERA, it is also defensible for <em>large, dynamic</em> corpora. For <em>casual web-scale PDFs, ticket attachments, low-value user uploads</em>, an OCR + text-embedding pipeline is often cheaper end-to-end. <strong>Choose architecture on corpus economics, not benchmark scores.</strong></p>
+  </div>
+</section>
+
+<hr />
+
+<!-- ========== PART V ========== -->
+<section id="part-5">
+  <h2><span class="tag">Part V</span>Open Weights, Closed APIs, and the Moats That Will Remain</h2>
+
+  <p>The top of almost every 2026 multimodal leaderboard is populated by Chinese labs — Alibaba (Qwen3-VL, GME, UniME), ByteDance (Seed1.6), Tencent (KaLM, LLaVE), BAAI (MegaPairs, BGE), Ant (M2-Encoder, GroupRank), Kuaishou (Modality Curation, UniECS), Xiaohongshu (LamRA), Qihoo 360 (RzenEmbed). This is structural, not cyclical. Three reasons, stated without hyperbole. <em>Strong open-weights MLLM bases in the 2–14B class</em> — Qwen2.5-VL, Qwen3-VL, InternVL3, GLM-4.1V, DeepSeek-VL2 are strong open starting points, and embedding quality inherits directly from base quality. <em>Vertical integration of data pipelines</em> — ByteDance, Alibaba, Kuaishou, Xiaohongshu operate among the world's largest image-text interactive corpora; "data &gt; architecture" structurally favors them. <em>Incentive asymmetry</em> — Chinese labs tend to publish open weights to stake international-reputation claims, while several Western labs gate their best models behind APIs. Public leaderboards therefore <em>systematically over-represent open-weights Chinese output and undercount closed Western models</em> (OpenAI, Anthropic, Cohere) that do not submit.</p>
+
+  <p>The narrative has to be stated carefully. The Western open-weights scene is not empty. Meta released <strong>Llama 4 (Scout / Maverick)</strong> as natively multimodal open weights in April 2025, and Llama 3.2 Vision earlier; a Llama-4-based embedder is obvious next. <strong>LLaVA-OneVision-1.5</strong> (<a href="https://arxiv.org/abs/2509.23661">arXiv 2509.23661</a>) competes with Qwen2.5-VL on several benchmarks. Microsoft's <strong>Harrier-OSS-27B</strong> tops text MTEB v2 at 74.3. Meta FAIR / NVIDIA / Google DeepMind still lead on narrow fronts (Perception Encoder, SigLIP 2, PS3, Nemotron-ColEmbed-V2). Salesforce + Waterloo (VLM2Vec), IBM (DAC), Apple (DFN, VeCLIP), Jina AI, Snowflake (Arctic-Embed 2.0), Cohere (Embed v4), Voyage (voyage-multimodal-3), Nomic all ship production-grade multimodal or text embedders outside China. The honest summary: <strong>the 2–14B open-weights multimodal embedding space is disproportionately Chinese, and the production-API breadth space is disproportionately Western. Neither dominates the other end.</strong></p>
+
+  <p>Where closed APIs will keep their moats into 2027–2028 is the set of modalities that are data-gated rather than compute-gated. <em>Audio embeddings and unified T+I+V+Audio+PDF</em>: Gemini Embedding is the only credible unified multimodal product as of April 2026 — the experimental <code>gemini-embedding-exp-03-07</code> reaches mean-task ≈ 68.32 on the Multilingual MTEB leaderboard, and no open-weights peer matches its modality breadth. <em>Long-context PDFs (&gt;200 pages, mixed text + figures)</em> — Gemini and Voyage-multimodal-3 have bespoke tokenizers; open weights lag. <em>3D / CAD / point clouds</em> — almost entirely absent from the open ecosystem. <em>Tabular + image joint retrieval</em> — Cohere Embed v4 handles text + images + mixed PDFs; truly native tabular encoding is rare on both sides. These are smaller markets than photo search, but they are where the closed-API moat compounds, because the <em>training corpora themselves are not open-sourceable</em>.</p>
+
+  <div class="callout callout-important">
+    <span class="ctitle">IMPORTANT · GEOGRAPHY OF MOATS</span>
+    <p>The Chinese-dominance narrative is half structural, half benchmark design. If Anthropic submitted a Claude multimodal embedder, or OpenAI submitted <code>text-embedding-3-multimodal</code>, the top of several leaderboards would shuffle. They haven't, because they don't compete on public benchmarks. If your use case involves audio, long PDFs, 3D, or tabular+visual joint retrieval, <strong>do not wait for open weights to catch up</strong> — they may not before 2028.</p>
+  </div>
+</section>
+
+<hr />
+
+<!-- ========== PART VI ========== -->
+<section id="part-6">
+  <h2><span class="tag">Part VI</span>Forecast 2026 → 2030 · Near, Mid, Far</h2>
+
+  <p>Forecasts are only useful if they are falsifiable. Each bet below names a <em>mechanism</em>, a <em>signal to track</em>, and a <em>falsifier</em>. Probabilities are subjective and calibrated against the author's track record in adjacent fields. <strong>Brier-score them in 2027, 2028, 2030.</strong> Many bets in the far tier are load-bearing for the thesis of the guide itself: if the far tier is wrong, the C–L–I frame is probably over-stated.</p>
+
+  <!-- SVG: Forecast timeline -->
+  <figure class="diagram">
+    <svg viewBox="0 0 880 210" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="fc" x1="0" x2="1">
+          <stop offset="0" stop-color="#39ff88"/>
+          <stop offset="0.5" stop-color="#00e5ff"/>
+          <stop offset="1" stop-color="#ff3fa4"/>
+        </linearGradient>
+        <linearGradient id="nearBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(57,255,136,0.2)"/><stop offset="1" stop-color="rgba(57,255,136,0.05)"/>
+        </linearGradient>
+        <linearGradient id="midBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(0,229,255,0.2)"/><stop offset="1" stop-color="rgba(0,229,255,0.05)"/>
+        </linearGradient>
+        <linearGradient id="farBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(255,63,164,0.2)"/><stop offset="1" stop-color="rgba(255,63,164,0.05)"/>
+        </linearGradient>
+        <filter id="fgGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <text x="440" y="28" text-anchor="middle" fill="#c9d1d9" font-family="Space Grotesk" font-size="15" font-weight="700">Three horizons · falsifiable bets</text>
+
+      <!-- main timeline -->
+      <line x1="40" y1="110" x2="840" y2="110" stroke="url(#fc)" stroke-width="3" filter="url(#fgGlow)"/>
+      <circle cx="40" cy="110" r="6" fill="#39ff88" filter="url(#fgGlow)"/>
+      <circle cx="840" cy="110" r="6" fill="#ff3fa4" filter="url(#fgGlow)"/>
+
+      <!-- Near tier -->
+      <rect x="40" y="60" width="270" height="32" rx="16" fill="url(#nearBg)" stroke="#39ff88" stroke-width="1.5"/>
+      <text x="175" y="82" text-anchor="middle" fill="#39ff88" font-family="JetBrains Mono" font-size="12" font-weight="800" letter-spacing="0.08em">NEAR · 2026 Q3 – 2027 Q4</text>
+      <circle cx="90" cy="110" r="6" fill="#39ff88" filter="url(#fgGlow)"/>
+      <line x1="90" y1="92" x2="90" y2="104" stroke="#39ff88" stroke-opacity="0.4"/>
+      <text x="90" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">Bidir CPT</text>
+      <circle cx="180" cy="110" r="6" fill="#39ff88" filter="url(#fgGlow)"/>
+      <text x="180" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">MUVERA default</text>
+      <circle cx="270" cy="110" r="6" fill="#39ff88" filter="url(#fgGlow)"/>
+      <text x="270" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">Embed-vLLM</text>
+
+      <!-- Mid tier -->
+      <rect x="330" y="60" width="260" height="32" rx="16" fill="url(#midBg)" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="460" y="82" text-anchor="middle" fill="#00e5ff" font-family="JetBrains Mono" font-size="12" font-weight="800" letter-spacing="0.08em">MID · 2027 – 2028 Q4</text>
+      <circle cx="370" cy="110" r="6" fill="#00e5ff" filter="url(#fgGlow)"/>
+      <text x="370" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">Trust-tier eval</text>
+      <circle cx="460" cy="110" r="6" fill="#00e5ff" filter="url(#fgGlow)"/>
+      <text x="460" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">Long-ctx ⊃ RAG</text>
+      <circle cx="550" cy="110" r="6" fill="#00e5ff" filter="url(#fgGlow)"/>
+      <text x="550" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">Retrieval → tool</text>
+
+      <!-- Far tier -->
+      <rect x="610" y="60" width="230" height="32" rx="16" fill="url(#farBg)" stroke="#ff3fa4" stroke-width="1.5"/>
+      <text x="725" y="82" text-anchor="middle" fill="#ff3fa4" font-family="JetBrains Mono" font-size="12" font-weight="800" letter-spacing="0.08em">FAR · 2029 – 2030+</text>
+      <circle cx="650" cy="110" r="6" fill="#ff3fa4" filter="url(#fgGlow)"/>
+      <text x="650" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">Agent memory</text>
+      <circle cx="735" cy="110" r="6" fill="#ff3fa4" filter="url(#fgGlow)"/>
+      <text x="735" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">Living evals</text>
+      <circle cx="815" cy="110" r="6" fill="#ff3fa4" filter="url(#fgGlow)"/>
+      <text x="815" y="138" text-anchor="middle" fill="#c9d1d9" font-family="JetBrains Mono" font-size="10.5">Multi-facet</text>
+
+      <!-- tier descriptors -->
+      <text x="175" y="160" text-anchor="middle" fill="#39ff88" font-family="JetBrains Mono" font-size="10" font-weight="700" opacity="0.7">plumbing</text>
+      <text x="460" y="160" text-anchor="middle" fill="#00e5ff" font-family="JetBrains Mono" font-size="10" font-weight="700" opacity="0.7">structural</text>
+      <text x="725" y="160" text-anchor="middle" fill="#ff3fa4" font-family="JetBrains Mono" font-size="10" font-weight="700" opacity="0.7">paradigm</text>
+
+      <line x1="40" y1="180" x2="840" y2="180" stroke="#2a3140" stroke-dasharray="2,5"/>
+      <text x="40" y="198" fill="#6e7681" font-family="JetBrains Mono" font-size="10" font-weight="600">now</text>
+      <text x="840" y="198" text-anchor="end" fill="#6e7681" font-family="JetBrains Mono" font-size="10" font-weight="600">2030+</text>
+    </svg>
+    <figcaption><span class="lbl">FIG 6.1</span> · Near = plumbing; Mid = structural; Far = paradigm.</figcaption>
+  </figure>
+
+  <!-- NEAR -->
+  <div class="horizon horizon-near">
+    <div><span class="label">Horizon · Near</span><span class="when">12–18 months · 2026 Q3 – 2027 Q4</span></div>
+    <h3>Where compute moves and which plumbing ships</h3>
+  </div>
+  <p>This horizon is about <em>where compute moves</em> and <em>which plumbing ships</em>. Bets here are dominated by mechanisms already demonstrated in papers and awaiting productization.</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>Bet</th><th>P(true)</th><th>Signal / Falsifier</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>N1</strong></td><td>Bidirectional continual pretraining is standard for top-5 MLLM embedders</td><td class="num"><span class="pbar"><i style="width:75%"></i></span>~75%</td><td>At least one of {Qwen3-VL-Embedding v2, InternVL3-Embedding, Seed1.7-Embedding} ships with <em>bidirectional continual</em> or <em>MLM-MAE pretext</em> language in the card. <strong>Falsifier:</strong> all stay purely causal and still win by &gt;2 pts</td></tr>
+      <tr><td><strong>N2</strong></td><td>Test-time compute is allocated at <strong>rerank</strong>, not query expansion, not retriever-internal CoT</td><td class="num"><span class="pbar"><i style="width:85%"></i></span>~85%</td><td>LlamaIndex / Haystack / DSPy default templates read "single-vector first + multi-vector middle + reasoning rerank on top-k". <strong>Falsifier:</strong> a published system shows &gt;5 NDCG@10 gain from retriever-internal CoT on a held-out bench</td></tr>
+      <tr><td><strong>N3</strong></td><td>MUVERA-class FDE is the default for new multi-vector deployments on the major DBs</td><td class="num"><span class="pbar"><i style="width:70%"></i></span>~70%</td><td>Weaviate / Qdrant / Vespa / LanceDB default deployment docs recommend FDE. <strong>Falsifier:</strong> &lt;30% adoption in late-interaction workloads by end-2026</td></tr>
+      <tr><td><strong>N4</strong></td><td>An open-source Embed-vLLM / SGLang-embed stack yields ≥3× throughput on Qwen3-VL-Embedding vs HF Transformers</td><td class="num"><span class="pbar"><i style="width:65%"></i></span>~65%</td><td>Public release with reproducible benchmark. <strong>Falsifier:</strong> none by mid-2027</td></tr>
+      <tr><td><strong>N5</strong></td><td>Reasoning-augmented embedders (TTE/UniME-V2 family) hold ≥2 top-5 MMEB-V2 slots</td><td class="num"><span class="pbar"><i style="width:70%"></i></span>~70%</td><td>MMEB-V2 CSV top-5 in Dec 2026. <strong>Falsifier:</strong> ≤1 TTE-style entry</td></tr>
+      <tr><td><strong>N6</strong></td><td>A first alpha of a consolidated multimodal benchmark (MTEB-MM or equivalent) lands, with held-out splits and C/L/I scorecard</td><td class="num"><span class="pbar"><i style="width:55%"></i></span>~55%</td><td>MTEB team RFC. <strong>Falsifier:</strong> nothing by Q2 2027</td></tr>
+      <tr><td><strong>N7</strong></td><td>Llama-4-based or Claude-Haiku-based open-weights embedder enters MMEB-V2 top-10</td><td class="num"><span class="pbar"><i style="width:55%"></i></span>~55%</td><td>Specifically, a Western 8–14B open-weights VLM-based embedder appears in the top-10. <strong>Falsifier:</strong> no Western open-weights entry in the top-10 through end-2026</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><strong>The load-bearing implication of the near tier</strong> is that the 2026 recipe (causal MLLM + bidirectional continual + reasoning rerank + MUVERA) crystallizes as <em>the default</em> rather than <em>an edge configuration</em>. After that happens, further gains on MMEB-V2 are bounded by benchmark hygiene, not by model capability.</p>
+
+  <!-- MID -->
+  <div class="horizon horizon-mid">
+    <div><span class="label">Horizon · Mid</span><span class="when">2–3 years · 2027 – 2028 Q4</span></div>
+    <h3>What replaces the leaderboard, what squeezes out of long-context LLMs</h3>
+  </div>
+  <p>This horizon is about <em>what replaces the leaderboard and what squeezes out of long-context LLMs</em>. Bets here are structural, not model-level.</p>
+
+  <p><strong>M1 · Public multimodal benchmarks bifurcate</strong> into a "trust tier" (held-out, private split, C/L/I scorecard) and a "marketing tier" (public static leaderboards). Mechanism: saturation + contamination + instruction-format gaming have crossed the threshold where a score is uninterpretable without provenance; institutional buyers (cloud vendors, regulated industries) pay for trusted eval. <em>P ≈ 65%.</em> <strong>Falsifier:</strong> public MMEB / MTEB remain the referenced source for enterprise RFPs through 2028.</p>
+
+  <p><strong>M2 · Long-context LLMs (&gt;4M tokens) absorb a meaningful slice of "retrieval" tasks that are currently RAG.</strong> Mechanism: the point where dumping a 500-page document into context beats retrieving three chunks has moved from "theoretical" to "Gemini 2.5 in production" — the remaining economic constraint is inference cost, which halves roughly every 9–12 months. <em>P ≈ 55%</em> that &gt;20% of current small-corpus RAG workloads migrate to in-context by end-2028. <strong>Falsifier:</strong> token-per-dollar inference cost fails to drop by 4× vs April 2026.</p>
+
+  <p><strong>M3 · The line between "retrieval" and "tool use" dissolves at the agent layer.</strong> Mechanism: MCP-style tool protocols already treat "search the KB" as one capability among many; reasoning-augmented retrievers (§II.1) already run inference-time logic that is indistinguishable from a tool call. <em>P ≈ 70%</em> that the default agent framework by 2028 treats retrieval as a <em>capability</em> rather than a separable <em>pipeline stage</em>. <strong>Falsifier:</strong> standalone RAG frameworks (LlamaIndex, Haystack) continue as dominant paradigm and agent frameworks stay separate.</p>
+
+  <p><strong>M4 · A unified open-weights T + I + V + Audio embedder</strong> reaches within 2 pts of Gemini Embedding's multilingual MTEB score on held-out splits. Mechanism: the data gap closes slowly but the model-side gap is one pretraining run. <em>P ≈ 45%</em> by end-2028. <strong>Falsifier:</strong> no open-weights model matches Gemini on any unified eval by 2028.</p>
+
+  <p><strong>M5 · Embodied retrieval — for robots, AR glasses, and offline agents — becomes a distinct sub-field.</strong> Mechanism: the scene in front of a wearable device is a new kind of "corpus" (spatially indexed, time-streamed, identity-bound), and existing embedding stacks do not model the spatial or temporal structure. Early signals: Meta Aria, visual SLAM + VLM hybrids, Twelve Labs' video work. <em>P ≈ 60%</em> that a benchmark for this lands by 2028. <strong>Falsifier:</strong> no such benchmark exists and the use case remains niche research.</p>
+
+  <p><strong>M6 · "Retrieval as preference alignment"</strong> — the retriever itself is RLHF'd on human or LLM judge signal, not just contrastive-trained. Mechanism: MLLM-as-judge in UniME-V2 is already a weak version; the next step is closing the loop with user-interaction data. Large consumer platforms (search, social, e-commerce) have the data moat; small labs do not. <em>P ≈ 70%</em> for at least one major retrieval paper per year in this direction starting 2027. <strong>Falsifier:</strong> contrastive InfoNCE remains the de-facto training objective across all top-10 papers through 2028.</p>
+
+  <p><strong>M7 · Chip and energy geography splits the embedding stack into two non-interoperable lineages.</strong> Mechanism: export controls, national-AI policies, and domestic chip supply lines (Ascend / Cambricon vs NVIDIA) combine with sovereign data rules (EU AI Act, China's generative-AI provisions) to make cross-border deployment of certain embedder + corpus combinations legally or operationally infeasible. <em>P ≈ 55%</em> that by end-2028 a "sovereign-embedding" tier of vendors explicitly markets on compliance + locality. <strong>Falsifier:</strong> one global open-weights stack continues to dominate without legal fragmentation.</p>
+
+  <!-- FAR -->
+  <div class="horizon horizon-far">
+    <div><span class="label">Horizon · Far</span><span class="when">3–5+ years · 2029 – 2030+</span></div>
+    <h3>Where the C–L–I frame itself comes under pressure</h3>
+  </div>
+  <p>This horizon is where the C–L–I frame itself comes under pressure. Far-tier bets are deliberately large-scope — falsifying them would reshape the field, not just reorder a leaderboard.</p>
+
+  <p><strong>F1 · Embedding as a standalone artifact enters its late phase; "retrieval" becomes a subset of agent memory.</strong> Mechanism: four convergent trends kill the standalone embedder for new projects while leaving installed fleets alive for years. <em>First</em>, long-context LLMs swallow small-corpus RAG. <em>Second</em>, reasoning-augmented retrievers push the embedder into the reasoner's latent state — Think-Then-Embed generalizes to "embedding is a function of the reasoner's working memory at the moment of retrieval", not of the document alone. <em>Third</em>, agent memory architectures (episodic + semantic + procedural, à la Voyager, MemGPT, Letta) treat dense vectors as one substrate among several — structured KV, symbolic indices, code-as-memory. <em>Fourth</em>, MLLM-as-judge reranking eats the top of the quality distribution, leaving the embedder as a cheap candidate-gen layer. The practical effect: by 2030, greenfield retrieval projects will look like <em>agent + tool registry + hybrid memory</em> rather than <em>encoder + ANN + reranker</em>; "embedding model" becomes a commodity inside the agent, not the center of the stack. <em>P ≈ 60%.</em> <strong>Falsifier:</strong> standalone embedding APIs (OpenAI, Cohere, Voyage, Jina) grow their embedding-specific revenue share through 2030.</p>
+
+  <p><strong>F2 · The CLIP / SigLIP / ColPali generation becomes "classic layer" infrastructure</strong> — paid for, under-maintained, everywhere. Mechanism: even as the frontier moves to agent memory, the installed base of vector indices, product search engines, recommendation pipelines, and academic benchmarks running on single-vector and ColPali encoders is measured in exabytes of persisted vectors. Migration cost is gigantic. Every previous ML generation (word2vec, ELMo, BERT base, ResNet-50) survived a decade past its SOTA obsolescence in production; this one will too. <em>P ≈ 85%.</em> <strong>Falsifier:</strong> a migration event (a major cloud deprecating CLIP-era encoders, a forced standardization) wipes the installed base by 2030.</p>
+
+  <p><strong>F3 · Evaluation moves from static public leaderboards to <em>living</em> benchmarks and private evals; publication norms follow.</strong> Mechanism: (M1) plus the gradual realization that any public test set, once named in a tweet, is compromised within one training cycle. Living benchmarks — dynamically generated queries against held-out corpora, with periodic rotation — become the only reputationally defensible eval. Academic papers start citing <em>distributions of scores</em> rather than single numbers. <em>P ≈ 55%.</em> <strong>Falsifier:</strong> MMEB-V4 / MTEB v3 dominate publications in 2029 on a static-leaderboard model.</p>
+
+  <p><strong>F4 · Governance and auditability become first-class features of embedding stacks.</strong> Mechanism: embeddings leak memorized content (membership inference is easier than on generative LLMs); vector databases hold personal data; multimodal embedders have copyright exposure on training images. Enterprise procurement already asks "is your training data auditable"; regulators will. By 2030, a production embedder ships with a training-data provenance document, a membership-inference bound, and a differential-privacy story, or it does not get bought by regulated industry. <em>P ≈ 70%.</em> <strong>Falsifier:</strong> no major enterprise procurement in 2029–2030 requires audit trails for embedding models.</p>
+
+  <p><strong>F5 · The "one embedding per item" assumption dies for a large class of items.</strong> Mechanism: a single-vector representation of "a video", "a codebase", "a person", "a scientific paper" is a dimensional straitjacket. The successor is <em>a bundle of representations</em> (spatial, temporal, semantic, stylistic, metadata) whose relevant subspace is selected dynamically by the querying agent — late interaction generalized to arbitrary attribute axes. MUVERA-style compression extends from "multi-token" to "multi-facet". <em>P ≈ 50%.</em> <strong>Falsifier:</strong> single-vector remains the dominant format for 90%+ of new production deployments in 2030.</p>
+
+  <p><strong>F6 · An embedding-free retrieval architecture beats a dense one on a major benchmark.</strong> Mechanism: hybrid stacks of structured indices (code ASTs, scene graphs, symbolic memory), LLM-generated query-specific indices, and neural attention over raw corpora — rather than pre-computed dense vectors — reclaim the top of some leaderboard. Precedent: SPLADE in text showed sparse can beat dense; the multimodal analogue has not landed but is plausible. <em>P ≈ 40%.</em> <strong>Falsifier:</strong> every top-5 entry on every major retrieval benchmark through 2030 uses pre-computed dense vectors as the primary primitive.</p>
+
+  <p><strong>F7 · Embedding geography bifurcates into distinct technical lineages, not just distinct vendors.</strong> Mechanism: M7 compounds over five years. By 2030, the Western lineage optimizes for API breadth + governance; the Chinese lineage optimizes for open-weights scale + domestic deployment; a third lineage (EU / sovereign clouds) optimizes for auditability + privacy. Interoperability exists at the interface level (vectors are vectors) but not at the training-data or compliance level. <em>P ≈ 45%.</em> <strong>Falsifier:</strong> a single global embedding stack (most likely a hyperscaler's) dominates all three geographies in 2030.</p>
+
+  <p><strong>F8 · Human-in-the-loop retrieval is the dominant consumer paradigm; vector similarity is invisible to the user.</strong> Mechanism: the "search bar returns ten links" UX is already eroding — Perplexity, ChatGPT Search, Google AI Mode replace it with a conversational reformulation loop. In that loop, embedding is a background primitive, not a product surface; the <em>product</em> is the conversation. <em>P ≈ 75%.</em> <strong>Falsifier:</strong> classical search UX (query → ranked list) remains the dominant consumer modality in 2030.</p>
+
+  <h3>Bets I am not making</h3>
+  <p>For calibration, three non-bets for the 12–24 month window. <strong>No single MLLM encoder will "rule them all"</strong> — the C–L–I triangle is real and stacks will hybridize, not collapse. <strong>No &gt;82 MMEB-V2 model will win on all tasks equally</strong> — saturation plus contamination make this a diminishing-returns problem; specialised models will win specialised axes. <strong>Open-weights audio-text embeddings will not reach Gemini Embedding parity by end-2027</strong> — the data gap is too wide.</p>
+
+  <h3>Where the field is actually stuck — the open problems that would move the far tier</h3>
+  <p>If you want a paper that is read in 2028 rather than filed, pick one of these and actually solve it. These are not "gaps" — they are unsolved problems whose solutions would change the probabilities in the far-tier table above.</p>
+
+  <ol>
+    <li><strong>Long-video retrieval (&gt;30 min).</strong> R@1 on LongVideoBench-Retrieval is materially below short-video baselines. Temporal reasoning, scene-change detection, efficient video-token compression are all open. Closed APIs (Twelve Labs Marengo-2.7, Pegasus-1.2) are partial answers.</li>
+    <li><strong>Fine-grained visual grounding at retrieval time.</strong> ColPali localizes within a document; nothing localizes within a photo or a long video frame well. Snappy (<a href="https://arxiv.org/abs/2512.02660">arXiv 2512.02660</a>) is a patch-to-region propagation partial answer.</li>
+    <li><strong>Calibration across modalities.</strong> Cosine similarity of T-T, I-I, and T-I pairs is not on the same scale even after training. Thresholds must be per-modality. No paper formalizes this.</li>
+    <li><strong>Incremental / streaming multi-vector indexing.</strong> MUVERA helps, but "add 10K pages to a 10M collection" is still thousands of inserts per document and requires periodic recentering.</li>
+    <li><strong>Compositional generalization evaluation.</strong> ARO, MMVP, SPEC are small and somewhat adversarial; a real-world compositional-generalization benchmark would cost more to build than any single lab has funded.</li>
+    <li><strong>Embodied / spatial retrieval.</strong> No consensus representation for "the scene in front of me, indexed by location and time".</li>
+    <li><strong>Preference-aligned retrievers.</strong> Contrastive InfoNCE is a weak proxy for user utility. Replacing it with a judge-in-the-loop or RL-from-interaction objective at scale is open.</li>
+  </ol>
+</section>
+
+<hr />
+
+<!-- ========== PART VII ========== -->
+<section id="part-7">
+  <h2><span class="tag">Part VII</span>Reference</h2>
+
+  <h3>7.1 Paper list — Era 1–2 foundations (2021 – mid-2025)</h3>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>arXiv</th><th>Paper</th><th>Abbr.</th><th>Affiliation</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://arxiv.org/abs/2103.00020">2103.00020</a></td><td>Learning Transferable Visual Models From Natural Language Supervision</td><td><strong>CLIP</strong></td><td>OpenAI</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2202.06767">2202.06767</a></td><td>Wukong: A 100 Million Large-scale Chinese Cross-modal Pre-training Benchmark</td><td>Wukong</td><td>Huawei</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2205.01917">2205.01917</a></td><td>CoCa: Contrastive Captioners are Image-Text Foundation Models</td><td>CoCa</td><td>Google Research</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2210.01936">2210.01936</a></td><td>When and Why Vision-Language Models Behave Like Bags-of-Words, and What to Do About It?</td><td>ARO</td><td>Stanford</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2210.08402">2210.08402</a></td><td>LAION-5B: An Open Large-Scale Dataset for Training Next Generation Image-Text Models</td><td>LAION-5B</td><td>LAION</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2211.01335">2211.01335</a></td><td>Chinese CLIP: Contrastive Vision-Language Pretraining in Chinese</td><td>Chinese CLIP</td><td>Alibaba</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2211.06679">2211.06679</a></td><td>AltCLIP: Altering the Language Encoder in CLIP for Extended Language Capabilities</td><td>AltCLIP</td><td>BAAI</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2212.00794">2212.00794</a></td><td>Scaling Language-Image Pre-training via Masking</td><td>FLIP</td><td>Meta FAIR</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2212.07143">2212.07143</a></td><td>Reproducible Scaling Laws for Contrastive Language-Image Learning (CVPR 2023)</td><td>OpenCLIP</td><td>LAION</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2303.15343">2303.15343</a></td><td>Sigmoid Loss for Language Image Pre-Training</td><td><strong>SigLIP</strong></td><td>Google</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2303.15389">2303.15389</a></td><td>EVA-CLIP: Improved Training Techniques for CLIP at Scale</td><td>EVA-CLIP</td><td>BAAI</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2304.14108">2304.14108</a></td><td>DataComp: In Search of the Next Generation of Multimodal Datasets</td><td>DataComp</td><td>consortium</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2305.19595">2305.19595</a></td><td>Dense and Aligned Captions (DAC) Promote Compositional Reasoning in VL Models</td><td>DAC</td><td>IBM</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2305.20088">2305.20088</a></td><td>Improving CLIP Training with Language Rewrites</td><td>LaCLIP</td><td>Google</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2309.17425">2309.17425</a></td><td>Data Filtering Networks</td><td>DFN</td><td>Apple</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2310.07699">2310.07699</a></td><td>VeCLIP: Improving CLIP Training via Visual-enriched Captions</td><td>VeCLIP</td><td>Apple</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2310.13355">2310.13355</a></td><td>SILC: Improving Vision Language Pretraining with Self-Distillation</td><td>SILC</td><td>Google</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2311.17136">2311.17136</a></td><td>UniIR: Training and Benchmarking Universal Multimodal Information Retrievers</td><td>UniIR</td><td>Waterloo</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2312.00081">2312.00081</a></td><td>Synthesize, Diagnose, and Optimize: Towards Fine-Grained Vision-Language Understanding</td><td>SPEC</td><td>Fudan</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2312.08578">2312.08578</a></td><td>Revisiting the Role of Language Priors in Vision-Language Models (DCI)</td><td>DCI</td><td>Meta FAIR</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2401.06209">2401.06209</a></td><td>Eyes Wide Shut? Exploring the Visual Shortcomings of Multimodal LLMs</td><td>MMVP</td><td>NYU</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2401.09865">2401.09865</a></td><td>Improving Fine-grained Understanding in Image-Text Pre-training</td><td>SPARC</td><td>DeepMind</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2401.15896">2401.15896</a></td><td>M2-Encoder: Advancing Bilingual Image-Text Understanding by Large-scale Efficient Pretraining</td><td>M2-Encoder</td><td>Ant Group</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2402.03216">2402.03216</a></td><td>BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation</td><td>BGE M3</td><td>BAAI</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2402.04252">2402.04252</a></td><td>EVA-CLIP-18B: Scaling CLIP to 18 Billion Parameters</td><td>EVA-CLIP-18B</td><td>BAAI</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2403.15378">2403.15378</a></td><td>Long-CLIP: Unlocking the Long-Text Capability of CLIP</td><td>Long-CLIP</td><td>Shanghai AI Lab</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2403.17007">2403.17007</a></td><td>DreamLIP: Language-Image Pre-training with Long Captions</td><td>DreamLIP</td><td>ZJU + Ant + SJTU + USTC + EIT + NEU</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2403.19651">2403.19651</a></td><td>MagicLens: Self-Supervised Image Retrieval with Open-Ended Instructions</td><td>MagicLens</td><td>Google</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2404.04125">2404.04125</a></td><td>No "Zero-Shot" Without Exponential Data: Pretraining Concept Frequency Determines Multimodal Model Performance</td><td>—</td><td>Tübingen</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2405.13777">2405.13777</a></td><td>No Filter: Cultural and Socioeconomic Diversity in Contrastive Vision-Language Models</td><td>—</td><td>DeepMind</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2405.16915">2405.16915</a></td><td>Multilingual Diversity Improves Vision-Language Representations</td><td>—</td><td>UW</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2405.19504">2405.19504</a></td><td><strong>MUVERA: Multi-Vector Retrieval via Fixed Dimensional Encodings</strong> (NeurIPS 2024)</td><td><strong>MUVERA</strong></td><td>Google Research</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2406.11251">2406.11251</a></td><td>Unifying Multimodal Retrieval via Document Screenshot Embedding</td><td>DSE</td><td>Waterloo / JHU</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2407.01449">2407.01449</a></td><td><strong>ColPali: Efficient Document Retrieval with Vision Language Models</strong></td><td><strong>ColPali</strong></td><td>illuin-tech</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2407.01523">2407.01523</a></td><td>MMLongBench-Doc: Benchmarking Long-context Document Understanding with Visualizations</td><td>MMLongBench-Doc</td><td>HKU / Alibaba</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2407.02883">2407.02883</a></td><td>CoIR: A Comprehensive Benchmark for Code Information Retrieval Models</td><td>CoIR</td><td>consortium</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2407.12580">2407.12580</a></td><td>E5-V: Universal Embeddings with Multimodal Large Language Models</td><td>E5-V</td><td>BUAA + Microsoft</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2410.05160">2410.05160</a></td><td>VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks</td><td>VLM2Vec</td><td>Waterloo + Salesforce</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2411.01106">2411.01106</a></td><td>SV-RAG: LoRA-Contextualizing Adaptation of MLLMs for Long Document Understanding</td><td>SV-RAG</td><td>—</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2411.02571">2411.02571</a></td><td>MM-Embed: Universal Multimodal Retrieval with Multimodal LLMs</td><td>MM-Embed</td><td>NVIDIA</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2412.01720">2412.01720</a></td><td>LamRA: Large Multimodal Model as Your Advanced Retrieval Assistant (CVPR 2025)</td><td>LamRA</td><td>SJTU + Xiaohongshu</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2412.04378">2412.04378</a></td><td>VladVA: Discriminative Fine-tuning of LVLMs</td><td>VladVA</td><td>Samsung AI</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2412.08802">2412.08802</a></td><td>jina-clip-v2: Multilingual Multimodal Embeddings for Text and Images</td><td>jina-clip-v2</td><td>Jina</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2412.14475">2412.14475</a></td><td>MegaPairs: Massive Data Synthesis for Universal Multimodal Retrieval</td><td>MegaPairs</td><td>BAAI</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2412.16855">2412.16855</a></td><td>GME: Improving Universal Multimodal Retrieval by Multimodal LLMs</td><td>GME</td><td>Alibaba</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2502.08468">2502.08468</a></td><td>mmE5: Improving Multimodal Multilingual Embeddings via High-quality Synthetic Data</td><td>mmE5</td><td>RUC + Microsoft</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2502.14786">2502.14786</a></td><td>SigLIP 2: Multilingual Vision-Language Encoders with Improved Semantic Understanding, Localization, and Dense Features</td><td><strong>SigLIP 2</strong></td><td>Google</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2503.04812">2503.04812</a></td><td>LLaVE: Large Language and Vision Embedding Models with Hardness-Weighted Contrastive Learning</td><td>LLaVE</td><td>Tencent</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2503.07891">2503.07891</a></td><td>Gemini Embedding: Generalizable Embeddings from Gemini</td><td>Gemini Embedding</td><td>Google</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2503.19900">2503.19900</a></td><td>CAFe: Unifying Representation and Generation with Contrastive-Autoregressive Finetuning</td><td>CAFe</td><td>Meta</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2503.19903">2503.19903</a></td><td>Scaling Vision Pre-Training to 4K Resolution</td><td>PS3</td><td>NVIDIA</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2504.01017">2504.01017</a></td><td>Scaling Language-Free Visual Representation Learning</td><td>LF-Vision</td><td>Meta FAIR</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2504.10471">2504.10471</a></td><td>MIEB: Massive Image Embedding Benchmark (130 tasks, 38 languages)</td><td>MIEB</td><td>MTEB team</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2504.13181">2504.13181</a></td><td>Perception Encoder: The Best Visual Embeddings Are Not at the Output of the Network</td><td>Perception Encoder</td><td>Meta FAIR</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2504.17432">2504.17432</a></td><td>Breaking the Modality Barrier: Universal Embedding Learning with Multimodal LLMs</td><td>UniME</td><td>Alibaba</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2505.11293">2505.11293</a></td><td>B3: Breaking the Batch Barrier for Vision Language Model Contrastive Learning</td><td>B3</td><td>Duke</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2505.11651">2505.11651</a></td><td>MIRACL-VISION: A Large, Multilingual, Visual Document Retrieval Benchmark</td><td>MIRACL-VISION</td><td>—</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2505.19650">2505.19650</a></td><td>Modality Curation: Building Universal Embeddings for Advanced Multimodal Information Retrieval</td><td>Modality Curation</td><td>NEU + Kuaishou</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2506.04997">2506.04997</a></td><td>Towards Storage-Efficient Visual Document Retrieval: An Empirical Study on Reducing Patch-Level Embeddings</td><td>Light-ColPali</td><td>—</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2506.05176">2506.05176</a></td><td>Qwen3 Embedding: Advancing Text Embedding and Reranking Through Foundation Models</td><td>Qwen3-Embedding</td><td>Alibaba</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2506.18902">2506.18902</a></td><td>jina-embeddings-v4: Universal Embeddings for Multimodal Multilingual Retrieval</td><td>jina-embeddings-v4</td><td>Jina</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2506.23115">2506.23115</a></td><td>MoCa: Modality-aware Continual Pre-training Makes Better Bidirectional Multimodal Embeddings</td><td><strong>MoCa</strong></td><td>RUC + Microsoft</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2507.04590">2507.04590</a></td><td>VLM2Vec-V2: Advancing Multimodal Embedding for Videos, Images, and Visual Documents</td><td>VLM2Vec-V2</td><td>Waterloo + Salesforce</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2507.22062">2507.22062</a></td><td>MetaCLIP 2: A Worldwide Scaling Recipe</td><td>Meta CLIP 2</td><td>Meta FAIR</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>7.2 Paper list — Era 3: MLLM-native + reasoning-augmented (Aug 2025 – Apr 2026)</h3>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Reference</th><th>Paper / Model</th><th>Abbr.</th><th>Affiliation</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://arxiv.org/abs/2508.13843">2508.13843</a></td><td>UniECS: Unified Multimodal E-Commerce Search Framework with Gated Cross-modal Fusion</td><td>UniECS</td><td>Kuaishou</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2509.23661">2509.23661</a></td><td>LLaVA-OneVision-1.5: Fully Open Framework for Democratized Multimodal Training</td><td>LLaVA-OV-1.5</td><td>EvolvingLMMs</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2510.05014">2510.05014</a></td><td>Think-Then-Embed: Generative Context Improves Multimodal Embeddings (ICLR 2026)</td><td><strong>TTE</strong></td><td>Meta + UCF + NYU</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2510.13515">2510.13515</a></td><td>UniME-V2: MLLM-as-a-Judge for Universal Multimodal Embedding Learning (AAAI 2026)</td><td><strong>UniME-V2</strong></td><td>Alibaba</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2510.27350">2510.27350</a></td><td>RzenEmbed: Towards Comprehensive Multimodal Retrieval</td><td>RzenEmbed</td><td>Qihoo 360</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2511.21121">2511.21121</a></td><td>Beyond Patch Aggregation: 3-Pass Pyramid Indexing for Vision-Enhanced Document Retrieval</td><td>VisionRAG</td><td>Academic</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2512.02660">2512.02660</a></td><td>Spatially-Grounded Document Retrieval via Patch-to-Region Relevance Propagation</td><td>Snappy</td><td>Academic</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2601.04720">2601.04720</a></td><td>Qwen3-VL-Embedding and Qwen3-VL-Reranker: A Unified Framework for State-of-the-Art Multimodal Retrieval and Ranking</td><td><strong>Qwen3-VL-Embedding</strong></td><td>Alibaba Qwen</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2602.03442">2602.03442</a></td><td>A-RAG: Agentic Retrieval-Augmented Generation with Dynamic Tool Use</td><td>A-RAG</td><td>Academic</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2602.03992">2602.03992</a></td><td>Nemotron-ColEmbed-V2: Scaling Late-Interaction Multimodal Embedders for Visual Document Retrieval</td><td><strong>Nemotron-ColEmbed-V2</strong></td><td>NVIDIA</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2602.07125">2602.07125</a></td><td>Reasoning-Augmented Representations for Multimodal Retrieval</td><td>RAR</td><td>Academic</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2603.01471">2603.01471</a></td><td>CoCoA: Collaborative Attention with EOS-Reconstruction for Bidirectional Multimodal Embedding</td><td><strong>CoCoA</strong></td><td>ICT/CAS + Baidu</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2603.05551">2603.05551</a></td><td>AutoThinkRAG: Adaptive Complexity-Aware Reasoning for Multimodal Retrieval-Augmented Generation</td><td>AutoThinkRAG</td><td>Academic</td></tr>
+      <tr><td><a href="https://arxiv.org/abs/2603.14635">2603.14635</a></td><td>Compute Allocation for Reasoning-Intensive Retrieval: Where Extra Thinking Actually Helps</td><td>ComputeAlloc</td><td>Academic</td></tr>
+      <tr><td><a href="https://huggingface.co/nvidia/llama-embed-nemotron-8b">HF</a></td><td>llama-embed-nemotron-8B</td><td>llama-embed-nemotron</td><td>NVIDIA</td></tr>
+      <tr><td><a href="https://huggingface.co/tencent/KaLM-Embedding-Gemma3-12B-2511">HF</a></td><td>KaLM-Embedding-Gemma3-12B</td><td>KaLM-Gemma3</td><td>Tencent</td></tr>
+      <tr><td><a href="https://huggingface.co/microsoft/harrier-oss-v1-27b">HF</a></td><td>Harrier-OSS-v1-27B (MTEB v2 = 74.3)</td><td>Harrier-OSS</td><td>Microsoft</td></tr>
+      <tr><td><a href="https://seed1-6-embedding.github.io/">Seed</a></td><td>Seed1.6-Embedding (closed API)</td><td>Seed1.6-Embedding</td><td>ByteDance</td></tr>
+      <tr><td><a href="https://blog.google/technology/developers/gemini-embedding-2/">Google</a></td><td>Gemini Embedding 2 (closed API, T+I+V+Audio+PDF)</td><td>Gemini Embedding 2</td><td>Google</td></tr>
+      <tr><td><a href="https://huggingface.co/blog/nvidia/nemotron-colembed-v2">HF blog</a></td><td>Nemotron-ColEmbed-V2 (late-interaction)</td><td>Nemotron-ColEmbed-V2</td><td>NVIDIA</td></tr>
+      <tr><td><a href="https://huggingface.co/Alibaba-NLP/gme-Qwen2-VL-7B-Instruct">HF</a></td><td>GME-Qwen2-VL-7B-Instruct (v2)</td><td>GME-v2</td><td>Alibaba DAMO</td></tr>
+      <tr><td><a href="https://huggingface.co/spaces/vidore/vidore-leaderboard-v2">ViDoRe V2</a></td><td>ColQwen2.5-multilingual-v1.0</td><td>ColQwen2.5-mling</td><td>illuin-tech</td></tr>
+      <tr><td><a href="https://huggingface.co/spaces/vidore/vidore-leaderboard-v3">ViDoRe V3</a></td><td>ColQwen3-7B</td><td>ColQwen3</td><td>illuin-tech</td></tr>
+      <tr><td><a href="https://huggingface.co/vidore/SauerkrautLM-ColQwen3-2B-v0.1">HF</a></td><td>SauerkrautLM-ColQwen3-2B</td><td>SauerkrautLM-ColQwen3</td><td>VAGO</td></tr>
+      <tr><td><a href="https://huggingface.co/nomic-ai/nomic-embed-multimodal-7b">HF</a></td><td>Nomic Embed Multimodal 7B</td><td>Nomic-Embed-MM</td><td>Nomic AI</td></tr>
+      <tr><td><a href="https://docs.cohere.com/docs/embed-v4">Cohere</a></td><td>Cohere Embed v4</td><td>Embed v4</td><td>Cohere</td></tr>
+      <tr><td><a href="https://docs.voyageai.com/docs/multimodal-embeddings">Voyage</a></td><td>Voyage Multimodal 3</td><td>Voyage-MM-3</td><td>Voyage</td></tr>
+      <tr><td><a href="https://huggingface.co/blog/embeddinggemma">HF blog</a></td><td>EmbeddingGemma-300M</td><td>EmbeddingGemma</td><td>Google</td></tr>
+      <tr><td><a href="https://huggingface.co/Snowflake/snowflake-arctic-embed-m-v2.0">HF</a></td><td>Snowflake Arctic-Embed 2.0</td><td>Arctic-Embed 2.0</td><td>Snowflake</td></tr>
+      <tr><td><a href="https://platform.openai.com/docs/guides/embeddings">OpenAI</a></td><td>OpenAI text-embedding-3</td><td>OpenAI v3</td><td>OpenAI</td></tr>
+      <tr><td><a href="https://huggingface.co/spaces/TIGER-Lab/MMEB-Leaderboard">MMEB</a></td><td>MMEB-V2 Leaderboard</td><td>MMEB-V2</td><td>TIGER-Lab</td></tr>
+      <tr><td><a href="https://huggingface.co/spaces/mteb/leaderboard">MTEB</a></td><td>MTEB v2 Leaderboard</td><td>MTEB v2</td><td>MTEB</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>7.3 Ecosystem matrix — choose by corpus × modality × freshness × axis</h3>
+
+  <h4>Vector DBs &amp; ANN indexes</h4>
+  <p>The question that matters is "multi-vector + MUVERA", not headline QPS.</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>System</th><th>Ver. (Apr 26)</th><th>Multi-vec / MaxSim</th><th>MUVERA / FDE</th><th>Quantization</th><th>When to pick</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>FAISS</td><td>1.11</td><td>Client-side only</td><td>No</td><td>Full + <strong>RaBitQ</strong> (new in 1.11)</td><td>Embedded libraries, research, &lt;50M items</td></tr>
+      <tr><td>Milvus</td><td>2.5 GA</td><td>Multi-vector fields; MaxSim via <code>group_by</code>; native MaxSim on 3.0 roadmap</td><td>3.0 roadmap</td><td>Binary / int8 / PQ / GPU-CAGRA</td><td>Cloud-native, &gt;100M items, hybrid search</td></tr>
+      <tr><td>Qdrant</td><td>1.14</td><td><strong>Native multivector + MaxSim</strong></td><td>FastEmbed post-processing</td><td>Binary / SQ / PQ / MRL truncate</td><td><strong>Default for ColPali / ColQwen</strong></td></tr>
+      <tr><td>Weaviate</td><td>1.31</td><td>MaxSim rerank + <strong>native MUVERA</strong></td><td><strong>Yes</strong> (<code>Encoding.muvera(...)</code>)</td><td>Binary / SQ / PQ / RQ</td><td>Generative-search-heavy apps; post-MUVERA ColPali</td></tr>
+      <tr><td>Vespa</td><td>8.4xx</td><td><strong>Native tensor MaxSim</strong></td><td>Partial (tensor ops)</td><td>Full stack</td><td>Largest-scale late-interaction (&gt;100M docs)</td></tr>
+      <tr><td>LanceDB</td><td>0.24</td><td>Multi-vector columns + client-side MaxSim</td><td>No official</td><td>Binary / int8 / PQ</td><td>Video / blob-heavy lakehouse</td></tr>
+      <tr><td>pgvector / pgvectorscale</td><td>0.8 / 0.6</td><td>Client-side MaxSim</td><td>No</td><td>HNSW / IVFFlat / StreamingDiskANN</td><td>Postgres-first + &gt;10M vectors</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>Rerankers — use one, always</h4>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Reranker</th><th>License</th><th>Niche</th></tr></thead>
+    <tbody>
+      <tr><td>Cohere Rerank 3.5</td><td>Closed API</td><td>Multilingual, long-context, tabular &amp; code</td></tr>
+      <tr><td>Jina Reranker v2-multimodal</td><td>Partial open</td><td>Cross-modal text ↔ image</td></tr>
+      <tr><td>Voyage rerank-2 / lite</td><td>Closed API</td><td>BEIR-competitive</td></tr>
+      <tr><td>mxbai-rerank-large-v2</td><td>Apache-2.0</td><td>Strong open-weights generalist</td></tr>
+      <tr><td>BGE reranker v2-m3 / v2-gemma / v2-minicpm-layerwise</td><td>Open</td><td>Speed/quality knob via layerwise</td></tr>
+      <tr><td>MLLM-as-reranker (GPT-4o/5, Claude 3.5/4, Gemini 2.x, Qwen2.5-VL, InternVL3)</td><td>API / local</td><td>Top-k visual rerank, RankGPT-style</td></tr>
+      <tr><td>RankLLM</td><td>Apache-2.0</td><td>Listwise LLM rerank library</td></tr>
+      <tr><td><strong>Think-Then-Embed / UniME-V2 as reranker</strong></td><td>Open</td><td>Reasoning-aware rerank — the 2026 new entry</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>Multimodal RAG frameworks</h4>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Framework</th><th>Highlight</th></tr></thead>
+    <tbody>
+      <tr><td>LlamaIndex 0.12 / 0.13</td><td><code>MultiModalVectorStoreIndex</code>, tightest DB integrations</td></tr>
+      <tr><td>Haystack 2.12</td><td><code>MultiModalTextEmbedder</code>, Cohere / Jina rerankers</td></tr>
+      <tr><td>DSPy 2.6 / 3.0 preview</td><td>Multimodal signatures + MIPROv2 / BootstrapFewShot</td></tr>
+      <tr><td>Byaldi 0.0.8+</td><td>ColPali / ColQwen2 / ColSmol wrapper</td></tr>
+      <tr><td>PyLate</td><td>Training + inference for late-interaction (MUVERA-ready)</td></tr>
+      <tr><td>RAGatouille</td><td>User-friendly ColBERT / PLAID</td></tr>
+      <tr><td>Morphik 1.x</td><td>OSS multimodal RAG server; ColPali + VLM routing</td></tr>
+      <tr><td>RAGFlow 0.16+</td><td>Document-centric RAG with OCR/layout + ColPali</td></tr>
+      <tr><td>Pixeltable</td><td>Declarative multimodal tables with CLIP / YOLO / VLM UDFs</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>Stack recipes · April 2026</h4>
+  <p>Each annotated with the axes it pushes.</p>
+
+  <ul>
+    <li><strong>100K product images, millions of queries/day.</strong> <span class="pill pill-C">C only</span> jina-clip-v2 → FAISS <code>IndexHNSWFlat</code> → mxbai-rerank-large-v2 → LLM answer. Skip MLLM encoders and ColPali.</li>
+    <li><strong>100K enterprise PDFs, chart/table/slide retrieval.</strong> <span class="pill pill-L">L</span>+<span class="pill pill-I">I</span> ColQwen2.5-multilingual / Nemotron-ColEmbed-V2 → Qdrant multivector (or Weaviate 1.31 with MUVERA) → Claude / GPT-4o/5 rerank → VLM answer. The killer app, now affordable at scale.</li>
+    <li><strong>100M social-media images, compositional queries.</strong> <span class="pill pill-C">C first</span>+<span class="pill pill-I">I rerank</span> SigLIP 2 first stage (MRL + binary) → Qwen3-VL-Embedding-8B rerank on top-1K → VLM answer. Reserve the MLLM encoder for rerank.</li>
+    <li><strong>Heterogeneous instruction-heavy RAG traffic.</strong> <span class="pill pill-I">I dominant</span> Think-Then-Embed or UniME-V2 reasoning rerank on top of Qwen3-VL-Embedding / RzenEmbed first stage. Monitor zero-shot vs instructed drift.</li>
+    <li><strong>Long-form videos (≥1 hr).</strong> <span class="pill pill-C">C</span>+<span class="pill pill-L">L</span> open. Marengo-2.7 / Pegasus-1.2 (Twelve Labs) for now; open weights not yet competitive. Re-evaluate Q3 2026.</li>
+    <li><strong>Mixed audio + PDF + image.</strong> <span class="pill pill-C">C breadth</span> Gemini Embedding is the credible unified option in April 2026. Budget for API spend.</li>
+  </ul>
+
+  <h3>7.4 Methodology &amp; epistemic hygiene</h3>
+  <p><em>Primary sources</em>: arXiv papers (linked), Hugging Face model cards, MMEB / MTEB / ViDoRe / MIEB public leaderboards (snapshotted April 2026), official vendor docs. <em>Secondary</em>: author-run benchmarks on an internal H100 SXM node for §IV; single-configuration, ±20% noise. <em>Tertiary</em>: vendor blogs, release notes, conference talks — linked, used only where primary references are unavailable.</p>
+
+  <p><strong>Load-bearing vs illustrative.</strong> The C–L–I frame and the §VI forecasts are load-bearing — the thesis depends on them. Specific numeric claims about individual models (MMEB scores, latency, storage) are illustrative — accurate to the snapshot, aging within 6–12 months.</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Type</th><th>Examples</th><th>Epistemic status</th></tr></thead>
+    <tbody>
+      <tr><td>Load-bearing</td><td>C–L–I frame; late interaction = within-item localization; saturation + contamination understate generalization by several points; the forecast bets</td><td>Stands behind these; expects reasonable aging</td></tr>
+      <tr><td>Directionally correct</td><td>MUVERA turns L-axis into a first-class primitive; test-time compute belongs in rerank; 2–14B open-weights multimodal disproportionately Chinese</td><td>Strongly held but context-dependent</td></tr>
+      <tr><td>Illustrative / snapshot</td><td>Specific benchmark numbers; exact VRAM; DB version numbers</td><td>Ages within 6–12 months; re-verify</td></tr>
+      <tr><td>Speculative</td><td>Far-tier bets (F1–F8)</td><td>Calibrated opinions, not fact</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><strong>Known gaps.</strong> A guide that hides its gaps is worse than one that names them. As of April 2026, this document does not cover: <em>adversarial robustness</em> (typographic attacks, watermark poisoning, OOD shift — relevant for moderation, T&amp;S, content-auth pipelines); <em>privacy / membership-inference</em> on contrastive models; <em>audio-text embedding</em> in the depth applied to vision; <em>3D / point-cloud / CAD</em>; <em>on-device / edge embedding</em>; <em>non-search uses of embeddings</em> (RL reward models, moderation, dedup, near-dup); <em>legal / licensing analysis</em> of training-data provenance. If you build in any of these areas, supplement this guide; do not substitute it.</p>
+
+  <p><strong>Freshness contract.</strong> Embeddings move fast; so do benchmarks. Treat every number older than this edition as stale. Living leaderboards linked in §7.1–7.2 are authoritative; this guide is a frame for reading them, not a replacement.</p>
+
+  <div class="callout callout-important">
+    <span class="ctitle">IMPORTANT · DISCLOSURE</span>
+    <p>The author works in this field and has production stakes. Readers should discount any claim that conveniently justifies a deployment choice the author has already committed to. The guide aims for a forecasting track record that can be graded publicly (§VI); that is the cleanest correction mechanism we have.</p>
+  </div>
+</section>
+
+<hr />
+
+<!-- Acknowledgements -->
+<section id="ack">
+  <h2><span class="tag">Ack</span>Acknowledgements</h2>
+  <p>Thanks to the authors of every paper, model, and leaderboard linked here. Particular debt to the MTEB / MMEB / MIEB / ViDoRe benchmark teams for transparent leaderboards; the ColBERT / ColPali lineage for making late interaction legible; the MUVERA authors for making it affordable; the LLM2Vec / E5-V / VLM2Vec / GME / Qwen-VL-Embedding / Seed1.6 teams for the MLLM-as-encoder recipe; and the many practitioners whose deployment post-mortems informed §IV.</p>
+  <p style="color:var(--fg-2);font-style:italic;">Errors and opinions are the author's alone.</p>
+</section>
+
+<!-- Citation -->
+<section id="citation">
+  <h2><span class="tag">Cite</span>Citation</h2>
+  <pre data-lang="bibtex"><code><span class="tok-at">@misc</span>{<span class="tok-n">li2026beyondclip</span>,
+  <span class="tok-k">author</span>       = {<span class="tok-s">Wei Li</span>},
+  <span class="tok-k">title</span>        = {<span class="tok-s">Beyond CLIP: A First-Principles Field Guide to Multimodal Embedding, from CLIP to the Post-Embedding Agent Stack</span>},
+  <span class="tok-k">howpublished</span> = {<span class="tok-s">\url{https://github.com/BIGBALLON/BeyondCLIP}</span>},
+  <span class="tok-k">year</span>         = {<span class="tok-s">2026</span>},
+  <span class="tok-k">note</span>         = {<span class="tok-s">2nd edition, April 2026</span>}
+}</code></pre>
+</section>
+
+<footer class="site-foot">
+  <p class="sig">&gt; END_OF_TRANSMISSION<span class="blink" style="color:var(--accent)">_</span></p>
+  <p>Beyond CLIP · 2nd edition · April 2026 · Rendered with 🦴 love for the terminal aesthetic</p>
+</footer>
+
+</main>
+</div>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
+<script>
+  // Reading progress
+  const progress = document.getElementById("progress");
+  const toTop = document.getElementById("toTop");
+  window.addEventListener("scroll", () => {
+    const h = document.documentElement;
+    const scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    progress.style.width = (scrolled * 100) + "%";
+    if (h.scrollTop > 480) toTop.classList.add("show");
+    else toTop.classList.remove("show");
+  });
+  toTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+</script>
+
+</body>
+</html>
